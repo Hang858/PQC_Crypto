@@ -5,11 +5,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
-#ifdef USE_HARDWARE_HASH
 #include "operator_interface.h"
-#endif
-
 #define SHAKE128_RATE 168
 #define SHAKE256_RATE 136
 #define SHA3_256_RATE 136
@@ -47,5 +43,6 @@ void scloudplus_G(unsigned char *output, const unsigned char *input,
 
 void sha3_512(uint8_t h[64], const uint8_t *in, size_t inlen);
 void sha3_256(uint8_t h[32], const uint8_t *in, size_t inlen);
+
 
 #endif

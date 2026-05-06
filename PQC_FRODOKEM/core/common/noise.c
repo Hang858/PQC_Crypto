@@ -4,12 +4,7 @@
 * Abstract: noise sampling functions
 *********************************************************************************************/
 
-#include "fips202.h"
-#include "param.h"
-#include "level_namespace.h"
-
-extern uint16_t CDF_TABLE[];
-extern uint16_t CDF_TABLE_LEN;
+#include "frodo_macrify.h"
 
 
 void frodo_sample_n(uint16_t *s, const size_t n) 

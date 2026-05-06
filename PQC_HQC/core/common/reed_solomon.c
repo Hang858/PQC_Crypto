@@ -85,11 +85,11 @@ void reed_solomon_encode(uint64_t *cdw, const uint64_t *msg) {
     size_t i, j, k;
     uint8_t gate_value = 0;
 
-    uint16_t tmp[PARAM_G] = {0};
-    uint16_t PARAM_RS_POLY[] = {RS_POLY_COEFS};
+    uint16_t tmp[HQC_MAX_G] = {0};
+    const uint16_t *rs_poly = g_hqc_params->rs_poly;
 
-    uint8_t msg_bytes[PARAM_K] = {0};
-    uint8_t cdw_bytes[PARAM_N1] = {0};
+    uint8_t msg_bytes[HQC_MAX_K] = {0};
+    uint8_t cdw_bytes[HQC_MAX_N1] = {0};
 
     memcpy(msg_bytes, msg, PARAM_K);
 
@@ -97,7 +97,7 @@ void reed_solomon_encode(uint64_t *cdw, const uint64_t *msg) {
         gate_value = msg_bytes[PARAM_K - 1 - i] ^ cdw_bytes[PARAM_N1 - PARAM_K - 1];
 
         for (j = 0; j < PARAM_G; ++j) {
-            tmp[j] = gf_mul(gate_value, PARAM_RS_POLY[j]);
+            tmp[j] = gf_mul(gate_value, rs_poly[j]);
         }
 
         for (k = PARAM_N1 - PARAM_K - 1; k; --k) {
@@ -118,9 +118,12 @@ void reed_solomon_encode(uint64_t *cdw, const uint64_t *msg) {
  * @param[in] cdw Array of size PARAM_N1 storing the received vector
  */
 void compute_syndromes(uint16_t *syndromes, uint8_t *cdw) {
+    const uint16_t *alpha_ij_pow = g_hqc_params->alpha_ij_pow;
+    const uint16_t alpha_ij_cols = g_hqc_params->alpha_ij_cols;
+
     for (size_t i = 0; i < 2 * PARAM_DELTA; ++i) {
         for (size_t j = 1; j < PARAM_N1; ++j) {
-            syndromes[i] ^= gf_mul(cdw[j], alpha_ij_pow[i][j - 1]);
+            syndromes[i] ^= gf_mul(cdw[j], alpha_ij_pow[i * alpha_ij_cols + (j - 1)]);
         }
         syndromes[i] ^= cdw[0];
     }
@@ -144,8 +147,8 @@ static uint16_t compute_elp(uint16_t *sigma, const uint16_t *syndromes) {
     uint16_t deg_sigma = 0;
     uint16_t deg_sigma_p = 0;
     uint16_t deg_sigma_copy = 0;
-    uint16_t sigma_copy[PARAM_DELTA + 1] = {0};
-    uint16_t X_sigma_p[PARAM_DELTA + 1] = {0, 1};
+    uint16_t sigma_copy[HQC_MAX_DELTA + 1] = {0};
+    uint16_t X_sigma_p[HQC_MAX_DELTA + 1] = {0, 1};
     uint16_t pp = (uint16_t)-1;  // 2*rho
     uint16_t d_p = 1;
     uint16_t d = syndromes[0];
@@ -235,7 +238,7 @@ static void compute_z_poly(uint16_t *z, const uint16_t *sigma, const uint16_t de
 
     z[0] = 1;
 
-    for (i = 1; i < PARAM_DELTA + 1; ++i) {
+    for (i = 1; i < (size_t)PARAM_DELTA + 1; ++i) {
         mask = -((uint16_t)(i - degree - 1) >> 15);
         z[i] = mask & sigma[i];
     }
@@ -262,8 +265,8 @@ static void compute_z_poly(uint16_t *z, const uint16_t *sigma, const uint16_t de
  * @param[in] error Array storing the error
  */
 static void compute_error_values(uint16_t *error_values, const uint16_t *z, const uint8_t *error) {
-    uint16_t beta_j[PARAM_DELTA] = {0};
-    uint16_t e_j[PARAM_DELTA] = {0};
+    uint16_t beta_j[HQC_MAX_DELTA] = {0};
+    uint16_t e_j[HQC_MAX_DELTA] = {0};
 
     uint16_t delta_counter;
     uint16_t delta_real_value;
@@ -351,12 +354,12 @@ static void correct_errors(uint8_t *cdw, const uint16_t *error_values) {
  * @param[in] cdw Array of size VEC_N1_SIZE_64 storing the received word
  */
 void reed_solomon_decode(uint64_t *msg, uint64_t *cdw) {
-    uint8_t cdw_bytes[PARAM_N1] = {0};
-    uint16_t syndromes[2 * PARAM_DELTA] = {0};
-    uint16_t sigma[1 << PARAM_FFT] = {0};
+    uint8_t cdw_bytes[HQC_MAX_N1] = {0};
+    uint16_t syndromes[2 * HQC_MAX_DELTA] = {0};
+    uint16_t sigma[1 << HQC_MAX_FFT] = {0};
     uint8_t error[1 << PARAM_M] = {0};
-    uint16_t z[PARAM_N1] = {0};
-    uint16_t error_values[PARAM_N1] = {0};
+    uint16_t z[HQC_MAX_N1] = {0};
+    uint16_t error_values[HQC_MAX_N1] = {0};
     uint16_t deg;
 
     // Copy the vector in an array of bytes

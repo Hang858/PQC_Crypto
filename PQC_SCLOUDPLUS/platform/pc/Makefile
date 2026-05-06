@@ -9,39 +9,35 @@ TEST_PATH = test
 
 CFLAGS = -O3 -Wall -Wextra -Wpedantic -std=c99 -DUSE_HARDWARE_HASH \
 	-I$(INCLUDE_PATH) -I$(CORE_PATH) -I$(COMMON_PATH) \
-	-I$(CORE_PATH)/scloudplus128 -I$(CORE_PATH)/scloudplus192 -I$(CORE_PATH)/scloudplus256 \
 	-I$(TEST_PATH) -I. -Isoft
 
-LEVEL_SRCS = encode kem matrix pke sample
-COMMON_SRCS = aes_c fips202 random util op_hash sha256 sm3 endian
+COMMON_SRCS = encode kem matrix pke sample scloudplus_params aes_c fips202 random util
+PLATFORM_SRCS = op_hash sha256 sm3 endian
 LIB = libpqc_scloudplus.a
 TEST_EXE = test_scloudplus_ref
 
 all: $(LIB)
 
-$(LIB): libscloudplus128_ref.a libscloudplus192_ref.a libscloudplus256_ref.a api.o $(COMMON_SRCS:%=%.o)
-	$(AR) -r $@ api.o $(COMMON_SRCS:%=%.o)
-
-libscloudplus128_ref.a: $(LEVEL_SRCS:%=scloudplus128_%.o)
+$(LIB): $(COMMON_SRCS:%=%.o) $(PLATFORM_SRCS:%=%.o)
 	$(AR) -r $@ $^
 
-libscloudplus192_ref.a: $(LEVEL_SRCS:%=scloudplus192_%.o)
-	$(AR) -r $@ $^
+encode.o:
+	$(CC) $(CFLAGS) -c $(COMMON_PATH)/encode.c -o $@
 
-libscloudplus256_ref.a: $(LEVEL_SRCS:%=scloudplus256_%.o)
-	$(AR) -r $@ $^
+kem.o:
+	$(CC) $(CFLAGS) -c $(COMMON_PATH)/kem.c -o $@
 
-api.o:
-	$(CC) $(CFLAGS) -c $(CORE_PATH)/api.c -o $@
+matrix.o:
+	$(CC) $(CFLAGS) -c $(COMMON_PATH)/matrix.c -o $@
 
-scloudplus128_%.o:
-	$(CC) $(CFLAGS) -DSCLOUDPLUS_LEVEL_128 -c $(COMMON_PATH)/$*.c -o $@
+pke.o:
+	$(CC) $(CFLAGS) -c $(COMMON_PATH)/pke.c -o $@
 
-scloudplus192_%.o:
-	$(CC) $(CFLAGS) -DSCLOUDPLUS_LEVEL_192 -c $(COMMON_PATH)/$*.c -o $@
+sample.o:
+	$(CC) $(CFLAGS) -c $(COMMON_PATH)/sample.c -o $@
 
-scloudplus256_%.o:
-	$(CC) $(CFLAGS) -DSCLOUDPLUS_LEVEL_256 -c $(COMMON_PATH)/$*.c -o $@
+scloudplus_params.o:
+	$(CC) $(CFLAGS) -c $(COMMON_PATH)/scloudplus_params.c -o $@
 
 aes_c.o:
 	$(CC) $(CFLAGS) -c $(COMMON_PATH)/aes_c.c -o $@
@@ -71,9 +67,7 @@ tests_main.o:
 	$(CC) $(CFLAGS) -c $(TEST_PATH)/tests_main.c -o $@
 
 $(TEST_EXE): $(LIB) tests_main.o
-	$(CC) $(CFLAGS) -o $@ tests_main.o api.o $(COMMON_SRCS:%=%.o) \
-		-Wl,--whole-archive libscloudplus128_ref.a libscloudplus192_ref.a libscloudplus256_ref.a -Wl,--no-whole-archive \
-		-lm
+	$(CC) $(CFLAGS) -o $@ tests_main.o $(LIB)
 
 test: $(TEST_EXE)
 	./$(TEST_EXE)

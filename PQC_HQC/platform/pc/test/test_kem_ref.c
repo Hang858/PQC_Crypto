@@ -16,26 +16,6 @@ static inline void flip_random_bit(uint8_t *buf, size_t start, size_t len) {
     buf[start + idx] ^= bit;
 }
 
-static void fill_random(uint8_t *buf, size_t len) {
-    int fd = open("/dev/urandom", O_RDONLY);
-    if (fd >= 0) {
-        size_t off = 0;
-        while (off < len) {
-            ssize_t got = read(fd, buf + off, len - off);
-            if (got <= 0) {
-                break;
-            }
-            off += (size_t)got;
-        }
-        close(fd);
-        if (off == len) {
-            return;
-        }
-    }
-
-    munit_rand_memory((uint32_t)len, buf);
-}
-
 static void run_kem_roundtrip(hqc_level_t level) {
     const hqc_params_t *params = HQC_get_params(level);
     uint8_t *pk = calloc(params->publickeybytes, 1);

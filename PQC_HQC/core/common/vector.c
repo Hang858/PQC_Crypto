@@ -32,17 +32,13 @@ static inline uint32_t compare_u32(const uint32_t v1, const uint32_t v2) {
  * @param[in] x Input value to reduce.
  * @return x mod PARAM_N in constant time.
  */
-static inline uint32_t barrett_reduce_param(const hqc_params_t *params, uint32_t x) {
-    uint64_t q = ((uint64_t)x * (uint64_t)((params != NULL) ? (
-        params->n == 17669 ? 243079ULL :
-        params->n == 35851 ? 119800ULL : 74517ULL
-    ) : PARAM_N_MU)) >> 32;
-    uint32_t n = (params != NULL) ? params->n : PARAM_N;
-    uint32_t r = x - (uint32_t)(q * n);
+static inline uint32_t barrett_reduce(uint32_t x) {
+    uint64_t q = ((uint64_t)x * PARAM_N_MU) >> 32;
+    uint32_t r = x - (uint32_t)(q * PARAM_N);
 
-    uint32_t reduce_flag = (((r - n) >> 31) ^ 1);
+    uint32_t reduce_flag = (((r - PARAM_N) >> 31) ^ 1);
     uint32_t mask = -reduce_flag;
-    r -= mask & n;
+    r -= mask & PARAM_N;
     return r;
 }
 
@@ -63,15 +59,11 @@ static inline uint32_t barrett_reduce_param(const hqc_params_t *params, uint32_t
  * @param[out]    support Output array to store the `weight` unique indices.
  * @param[in]     weight  Desired Hamming weight.
  */
-void vect_generate_random_support1_param(const hqc_params_t *params, shake256_xof_ctx *ctx, uint32_t *support, uint16_t weight) {
+void vect_generate_random_support1(shake256_xof_ctx *ctx, uint32_t *support, uint16_t weight) {
     size_t random_bytes_size = 3 * weight;
-    uint8_t rand_bytes[3 * PARAM_OMEGA_R] = {0};
+    uint8_t rand_bytes[3 * HQC_MAX_OMEGA_R] = {0};
     uint8_t inc;
     size_t i, j;
-    uint32_t rejection_threshold = (params != NULL) ? (
-        params->n == 17669 ? 16767881U :
-        params->n == 35851 ? 16742417U : 16772367U
-    ) : UTILS_REJECTION_THRESHOLD;
 
     i = 0;
     j = random_bytes_size;
@@ -86,9 +78,9 @@ void vect_generate_random_support1_param(const hqc_params_t *params, shake256_xo
             support[i] |= ((uint32_t)rand_bytes[j++]) << 8;
             support[i] |= rand_bytes[j++];
 
-        } while (support[i] >= rejection_threshold);
+        } while (support[i] >= UTILS_REJECTION_THRESHOLD);
 
-        support[i] = barrett_reduce_param(params, support[i]);
+        support[i] = barrett_reduce(support[i]);
 
         inc = 1;
         for (size_t k = 0; k < i; k++) {
@@ -100,10 +92,6 @@ void vect_generate_random_support1_param(const hqc_params_t *params, shake256_xo
     }
 }
 
-void vect_generate_random_support1(shake256_xof_ctx *ctx, uint32_t *support, uint16_t weight) {
-    vect_generate_random_support1_param(NULL, ctx, support, weight);
-}
-
 /**
  * @brief Generates a random support set of distinct indices.
  *
@@ -113,15 +101,14 @@ void vect_generate_random_support1(shake256_xof_ctx *ctx, uint32_t *support, uin
  * @param[out]    support Output array of unique indices (the support set).
  * @param[in]     weight  Number of elements to generate (Hamming weight).
  */
-void vect_generate_random_support2_param(const hqc_params_t *params, shake256_xof_ctx *ctx, uint32_t *support, uint16_t weight) {
-    uint32_t rand_u32[PARAM_OMEGA_R] = {0};
-    uint32_t n = (params != NULL) ? params->n : PARAM_N;
+void vect_generate_random_support2(shake256_xof_ctx *ctx, uint32_t *support, uint16_t weight) {
+    uint32_t rand_u32[HQC_MAX_OMEGA_R] = {0};
 
     xof_get_bytes(ctx, (uint8_t *)&rand_u32, 4 * weight);
 
     for (size_t i = 0; i < weight; ++i) {
         uint64_t buff = rand_u32[i];
-        support[i] = i + ((buff * (n - i)) >> 32);
+        support[i] = i + ((buff * (PARAM_N - i)) >> 32);
     }
 
     for (int32_t i = (weight - 1); i-- > 0;) {
@@ -136,10 +123,6 @@ void vect_generate_random_support2_param(const hqc_params_t *params, shake256_xo
     }
 }
 
-void vect_generate_random_support2(shake256_xof_ctx *ctx, uint32_t *support, uint16_t weight) {
-    vect_generate_random_support2_param(NULL, ctx, support, weight);
-}
-
 /**
  * @brief Sets bits in a vector based on a support set.
  *
@@ -150,10 +133,9 @@ void vect_generate_random_support2(shake256_xof_ctx *ctx, uint32_t *support, uin
  * @param[in]  support Array of bit indices to set.
  * @param[in]  weight  Number of positions to set.
  */
-void vect_write_support_to_vector_param(const hqc_params_t *params, uint64_t *v, uint32_t *support, uint16_t weight) {
-    uint32_t index_tab[PARAM_OMEGA_R] = {0};
-    uint64_t bit_tab[PARAM_OMEGA_R] = {0};
-    uint32_t vec_n_size_64 = (params != NULL) ? ((params->n + 63U) / 64U) : VEC_N_SIZE_64;
+void vect_write_support_to_vector(uint64_t *v, uint32_t *support, uint16_t weight) {
+    uint32_t index_tab[HQC_MAX_OMEGA_R] = {0};
+    uint64_t bit_tab[HQC_MAX_OMEGA_R] = {0};
 
     for (size_t i = 0; i < weight; i++) {
         index_tab[i] = support[i] >> 6;
@@ -162,7 +144,7 @@ void vect_write_support_to_vector_param(const hqc_params_t *params, uint64_t *v,
     }
 
     uint64_t val = 0;
-    for (uint32_t i = 0; i < vec_n_size_64; i++) {
+    for (uint32_t i = 0; i < VEC_N_SIZE_64; i++) {
         val = 0;
         for (uint32_t j = 0; j < weight; j++) {
             uint32_t tmp = i - index_tab[j];
@@ -172,10 +154,6 @@ void vect_write_support_to_vector_param(const hqc_params_t *params, uint64_t *v,
         }
         v[i] |= val;
     }
-}
-
-void vect_write_support_to_vector(uint64_t *v, uint32_t *support, uint16_t weight) {
-    vect_write_support_to_vector_param(NULL, v, support, weight);
 }
 
 /**
@@ -193,14 +171,10 @@ void vect_write_support_to_vector(uint64_t *v, uint32_t *support, uint16_t weigh
  *                        bits set to 1.
  * @param[in]     weight  Desired Hamming weight.
  */
-void vect_sample_fixed_weight1_param(const hqc_params_t *params, shake256_xof_ctx *ctx, uint64_t *v, uint16_t weight) {
-    uint32_t support[PARAM_OMEGA_R] = {0};
-    vect_generate_random_support1_param(params, ctx, support, weight);
-    vect_write_support_to_vector_param(params, v, support, weight);
-}
-
 void vect_sample_fixed_weight1(shake256_xof_ctx *ctx, uint64_t *v, uint16_t weight) {
-    vect_sample_fixed_weight1_param(NULL, ctx, v, weight);
+    uint32_t support[HQC_MAX_OMEGA_R] = {0};
+    vect_generate_random_support1(ctx, support, weight);
+    vect_write_support_to_vector(v, support, weight);
 }
 
 /**
@@ -216,14 +190,10 @@ void vect_sample_fixed_weight1(shake256_xof_ctx *ctx, uint64_t *v, uint16_t weig
  *                        bits set to 1.
  * @param[in]     weight  Desired Hamming weight.
  */
-void vect_sample_fixed_weight2_param(const hqc_params_t *params, shake256_xof_ctx *ctx, uint64_t *v, uint16_t weight) {
-    uint32_t support[PARAM_OMEGA_R] = {0};
-    vect_generate_random_support2_param(params, ctx, support, weight);
-    vect_write_support_to_vector_param(params, v, support, weight);
-}
-
 void vect_sample_fixed_weight2(shake256_xof_ctx *ctx, uint64_t *v, uint16_t weight) {
-    vect_sample_fixed_weight2_param(NULL, ctx, v, weight);
+    uint32_t support[HQC_MAX_OMEGA_R] = {0};
+    vect_generate_random_support2(ctx, support, weight);
+    vect_write_support_to_vector(v, support, weight);
 }
 
 /**
@@ -235,16 +205,9 @@ void vect_sample_fixed_weight2(shake256_xof_ctx *ctx, uint64_t *v, uint16_t weig
  * @param[in] ctx Pointer to the context of the xof
  * @param[in] v Pointer to an array
  */
-void vect_set_random_param(const hqc_params_t *params, shake256_xof_ctx *ctx, uint64_t *v) {
-    uint32_t n = (params != NULL) ? params->n : PARAM_N;
-    uint32_t vec_n_size_bytes = (n + 7U) / 8U;
-    uint32_t vec_n_size_64 = (n + 63U) / 64U;
-    xof_get_bytes(ctx, (uint8_t *)v, vec_n_size_bytes);
-    v[vec_n_size_64 - 1] &= BITMASK(n, 64);
-}
-
 void vect_set_random(shake256_xof_ctx *ctx, uint64_t *v) {
-    vect_set_random_param(NULL, ctx, v);
+    xof_get_bytes(ctx, (uint8_t *)v, VEC_N_SIZE_BYTES);
+    v[VEC_N_SIZE_64 - 1] &= BITMASK(PARAM_N, 64);
 }
 
 /**
@@ -288,12 +251,10 @@ uint8_t vect_compare(const uint8_t *v1, const uint8_t *v2, uint32_t size) {
  *
  * @param[in,out] v         Pointer to the uint64_t array containing the bits.
  */
-void vect_truncate_param(const hqc_params_t *params, uint64_t *v) {
-    uint32_t n = (params != NULL) ? params->n : PARAM_N;
-    uint32_t n1n2 = (params != NULL) ? params->n1n2 : PARAM_N1N2;
-    size_t orig_words = (n + 63U) / 64U;
-    size_t new_full_words = n1n2 / 64U;
-    size_t remaining_bits = n1n2 % 64U;
+void vect_truncate(uint64_t *v) {
+    size_t orig_words = (PARAM_N + 63) / 64;
+    size_t new_full_words = PARAM_N1N2 / 64;
+    size_t remaining_bits = PARAM_N1N2 % 64;
 
     // Mask the last word if there's a partial word
     if (remaining_bits > 0) {
@@ -308,45 +269,36 @@ void vect_truncate_param(const hqc_params_t *params, uint64_t *v) {
     }
 }
 
-void vect_truncate(uint64_t *v) {
-    vect_truncate_param(NULL, v);
-}
-
 /**
  * @brief Prints a given number of bytes
  *
  * @param[in] v Pointer to an array of bytes
  * @param[in] size Integer that is number of bytes to be displayed
  */
-void vect_print_param(const hqc_params_t *params, const uint64_t *v, const uint32_t size) {
-    (void)params;
+void vect_print(const uint64_t *v, const uint32_t size) {
     if (size == VEC_K_SIZE_BYTES) {
-        uint8_t tmp[VEC_K_SIZE_BYTES] = {0};
+        uint8_t tmp[HQC_MAX_K] = {0};
         memcpy(tmp, v, VEC_K_SIZE_BYTES);
         for (uint32_t i = 0; i < VEC_K_SIZE_BYTES; ++i) {
             printf("%02x", tmp[i]);
         }
     } else if (size == VEC_N_SIZE_BYTES) {
-        uint8_t tmp[VEC_N_SIZE_BYTES] = {0};
+        uint8_t tmp[HQC_MAX_VEC_N_SIZE_BYTES] = {0};
         memcpy(tmp, v, VEC_N_SIZE_BYTES);
         for (uint32_t i = 0; i < VEC_N_SIZE_BYTES; ++i) {
             printf("%02x", tmp[i]);
         }
     } else if (size == VEC_N1N2_SIZE_BYTES) {
-        uint8_t tmp[VEC_N1N2_SIZE_BYTES] = {0};
+        uint8_t tmp[HQC_MAX_VEC_N1N2_SIZE_BYTES] = {0};
         memcpy(tmp, v, VEC_N1N2_SIZE_BYTES);
         for (uint32_t i = 0; i < VEC_N1N2_SIZE_BYTES; ++i) {
             printf("%02x", tmp[i]);
         }
     } else if (size == VEC_N1_SIZE_BYTES) {
-        uint8_t tmp[VEC_N1_SIZE_BYTES] = {0};
+        uint8_t tmp[HQC_MAX_N1] = {0};
         memcpy(tmp, v, VEC_N1_SIZE_BYTES);
         for (uint32_t i = 0; i < VEC_N1_SIZE_BYTES; ++i) {
             printf("%02x", tmp[i]);
         }
     }
-}
-
-void vect_print(const uint64_t *v, const uint32_t size) {
-    vect_print_param(NULL, v, size);
 }

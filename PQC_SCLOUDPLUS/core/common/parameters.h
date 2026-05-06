@@ -1,14 +1,42 @@
-#ifndef PQC_SCLOUDPLUS_PARAMETERS_SELECTOR_H
-#define PQC_SCLOUDPLUS_PARAMETERS_SELECTOR_H
+#ifndef PQC_SCLOUDPLUS_PARAMETERS_H
+#define PQC_SCLOUDPLUS_PARAMETERS_H
 
-#if defined(SCLOUDPLUS_LEVEL_128)
-#include "../scloudplus128/parameters.h"
-#elif defined(SCLOUDPLUS_LEVEL_192)
-#include "../scloudplus192/parameters.h"
-#elif defined(SCLOUDPLUS_LEVEL_256)
-#include "../scloudplus256/parameters.h"
-#else
-#error "SCLOUDPLUS level selection macro is not defined"
-#endif
+#include "scloudplus_params.h"
+
+#define SCLOUDPLUS_L (g_scloudplus_params->l)
+#define SCLOUDPLUS_SS (g_scloudplus_params->ss)
+#define SCLOUDPLUS_M (g_scloudplus_params->m)
+#define SCLOUDPLUS_N (g_scloudplus_params->n)
+#define SCLOUDPLUS_MBAR (g_scloudplus_params->mbar)
+#define SCLOUDPLUS_NBAR (g_scloudplus_params->nbar)
+#define SCLOUDPLUS_LOGQ (g_scloudplus_params->logq)
+#define SCLOUDPLUS_LOGQ1 (g_scloudplus_params->logq1)
+#define SCLOUDPLUS_LOGQ2 (g_scloudplus_params->logq2)
+#define SCLOUDPLUS_H1 (g_scloudplus_params->h1)
+#define SCLOUDPLUS_H2 (g_scloudplus_params->h2)
+#define SCLOUDPLUS_ETA1 (g_scloudplus_params->eta1)
+#define SCLOUDPLUS_ETA2 (g_scloudplus_params->eta2)
+#define SCLOUDPLUS_MU (g_scloudplus_params->mu)
+#define SCLOUDPLUS_TAU (g_scloudplus_params->tau)
+#define SCLOUDPLUS_SUBM (g_scloudplus_params->subm)
+#define SCLOUDPLUS_BLOCK_NUMBER (g_scloudplus_params->block_number)
+#define SCLOUDPLUS_BLOCK_SIZE (g_scloudplus_params->block_size)
+#define SCLOUDPLUS_BLOCK_ROWLEN (g_scloudplus_params->block_rowlen)
+#define SCLOUDPLUS_C1 (g_scloudplus_params->c1)
+#define SCLOUDPLUS_C2 (g_scloudplus_params->c2)
+#define SCLOUDPLUS_CTX (g_scloudplus_params->ctx)
+#define SCLOUDPLUS_PK (g_scloudplus_params->pk)
+#define SCLOUDPLUS_PKE_SK (g_scloudplus_params->pke_sk)
+#define SCLOUDPLUS_KEM_SK (g_scloudplus_params->kem_sk)
+#define SCLOUDPLUS_M2 (g_scloudplus_params->m2)
+#define SCLOUDPLUS_M3 (g_scloudplus_params->m3)
+#define SCLOUDPLUS_M4 (g_scloudplus_params->m4)
+#define SCLOUDPLUS_M5 (g_scloudplus_params->m5)
+#define SCLOUDPLUS_N2 (g_scloudplus_params->n2)
+#define SCLOUDPLUS_N3 (g_scloudplus_params->n3)
+#define SCLOUDPLUS_N4 (g_scloudplus_params->n4)
+#define SCLOUDPLUS_N5 (g_scloudplus_params->n5)
+#define SCLOUDPLUS_MNIN (g_scloudplus_params->mnin)
+#define SCLOUDPLUS_MNOUT (g_scloudplus_params->mnout)
 
 #endif

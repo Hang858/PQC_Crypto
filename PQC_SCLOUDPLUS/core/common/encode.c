@@ -1,31 +1,9 @@
 #include "encode.h"
 #include "param.h"
+#include <stdlib.h>
 #include <string.h>
 
-#if defined(__GNUC__) || defined(__clang__)
-#define SCLOUDPLUS_NOINLINE __attribute__((noinline))
-#else
-#define SCLOUDPLUS_NOINLINE
-#endif
-
-#define FIX_FROM_INT(x) ((int32_t)((x) << SCLOUDPLUS_FIX_SHIFT))
-
-static inline int32_t fixed_round_to_int(int32_t x)
-{
-	if (x >= 0) {
-		return (x + (SCLOUDPLUS_FIX_SCALE / 2)) >> SCLOUDPLUS_FIX_SHIFT;
-	}
-	return -(((-x) + (SCLOUDPLUS_FIX_SCALE / 2)) >> SCLOUDPLUS_FIX_SHIFT);
-}
-
-static inline Complex reduce_component_pair(Complex in, int32_t imag_mask, int32_t real_mask)
-{
-	int32_t imag_int = fixed_round_to_int(in.imag);
-	int32_t mod = imag_int & imag_mask;
-	int32_t sub = mod - imag_int;
-	int32_t real_int = (fixed_round_to_int(in.real) + sub) & real_mask;
-	return (Complex){FIX_FROM_INT(real_int), FIX_FROM_INT(mod)};
-}
+#define COMPLEX_SCALE 4096
 
 Complex complex_add(Complex a, Complex b) {
 	return (Complex){a.real + b.real, a.imag + b.imag};
@@ -35,13 +13,20 @@ Complex complex_sub(Complex a, Complex b) {
 }
 Complex complex_mul(Complex a, Complex b) {
 	return (Complex){
-		(int32_t)((((int64_t)a.real * b.real) - ((int64_t)a.imag * b.imag)) >> SCLOUDPLUS_FIX_SHIFT),
-		(int32_t)((((int64_t)a.real * b.imag) + ((int64_t)a.imag * b.real)) >> SCLOUDPLUS_FIX_SHIFT)
+		(a.real * b.real - a.imag * b.imag) / COMPLEX_SCALE,
+		(a.real * b.imag + a.imag * b.real) / COMPLEX_SCALE
 	};
 }
 
-int32_t my_round(int32_t x) {
-	return fixed_round_to_int(x);
+static int32_t complex_round(int64_t x) {
+	if (x >= 0) {
+		return (int32_t)((x + COMPLEX_SCALE / 2) / COMPLEX_SCALE);
+	}
+	return (int32_t)((x - COMPLEX_SCALE / 2) / COMPLEX_SCALE);
+}
+
+static Complex complex_from_int(int32_t real, int32_t imag) {
+	return (Complex){(int64_t)real * COMPLEX_SCALE, (int64_t)imag * COMPLEX_SCALE};
 }
 
 
@@ -70,7 +55,7 @@ static inline void compute_v(const uint8_t* m, Complex v[16])
     uint8_t A[6] = {0};
     uint8_t B[20] = {0};
     uint8_t C[6] = {0};
-#if (scloudplus_tau == 3)
+if (SCLOUDPLUS_TAU == 3) {
     A[0] = (m[0] >> 0) & 0x07;
     A[1] = (m[0] >> 3) & 0x07;
     A[2] = ((m[0] >> 6) & 0x03) | ((m[1] << 2) & 0x04);
@@ -97,7 +82,7 @@ static inline void compute_v(const uint8_t* m, Complex v[16])
     C[3] = (m[7] >> 5) & 0x01;
     C[4] = (m[7] >> 6) & 0x01;
     C[5] = (m[7] >> 7) & 0x01;
-#elif (scloudplus_tau == 4)
+} else if (SCLOUDPLUS_TAU == 4) {
 	A[0] = m[0] & 0x0F;
 	A[1] = (m[0] >> 4) & 0x0F;
 	A[2] = m[1] & 0x0F;
@@ -135,7 +120,7 @@ static inline void compute_v(const uint8_t* m, Complex v[16])
 	C[4] = (m[11] >> 4) & 0x03;
 	C[5] = (m[11] >> 6) & 0x03;
 
-#endif
+}
     uint8_t D[32] = {
         A[0], A[1], A[2], B[0], A[3], B[1], B[2], B[3],
         A[4], B[4], B[5], B[6], B[7], B[8], B[9], C[0],
@@ -145,8 +130,8 @@ static inline void compute_v(const uint8_t* m, Complex v[16])
 
     for (int i = 0; i < 16; ++i)
     {
-        v[i].real = FIX_FROM_INT(D[2 * i]);
-        v[i].imag = FIX_FROM_INT(D[2 * i + 1]);
+        v[i].real = (int64_t)D[2 * i] * COMPLEX_SCALE;
+        v[i].imag = (int64_t)D[2 * i + 1] * COMPLEX_SCALE;
     }
 }
 
@@ -164,8 +149,8 @@ static inline void compute_w(const Complex v[16], uint16_t w[32])
 {
     Complex tmp[16];
     Complex base;
-    base.real = FIX_FROM_INT(1);
-    base.imag = FIX_FROM_INT(1);
+    base.real = COMPLEX_SCALE;
+    base.imag = COMPLEX_SCALE;
     for (int i = 0; i < 16; i++)
     {
         tmp[i] = v[i];
@@ -192,21 +177,21 @@ static inline void compute_w(const Complex v[16], uint16_t w[32])
         tmp[8 + i] = complex_add(tmp[i], complex_mul(tmp[8 + i], base));
     }
 
-#if (scloudplus_tau == 3)
+if (SCLOUDPLUS_TAU == 3) {
     for (int i = 0; i < 16; i++)
     {
-        w[2 * i] = ((uint16_t)(fixed_round_to_int(tmp[i].real) & 0x7) * (1 << (scloudplus_logq - 3))) & 0xFFF;
+        w[2 * i] = ((uint16_t)(complex_round(tmp[i].real) & 0x7) * (1 << (SCLOUDPLUS_LOGQ - 3))) & 0xFFF;
 
-        w[2 * i + 1] = ((uint16_t)(fixed_round_to_int(tmp[i].imag) & 0x7) * (1 << (scloudplus_logq - 3))) & 0xFFF;
+        w[2 * i + 1] = ((uint16_t)(complex_round(tmp[i].imag) & 0x7) * (1 << (SCLOUDPLUS_LOGQ - 3))) & 0xFFF;
     }
-#elif (scloudplus_tau == 4)
+} else if (SCLOUDPLUS_TAU == 4) {
 	for (int i = 0; i < 16; i++)
 	{
-		w[2 * i] = ((uint16_t)(fixed_round_to_int(tmp[i].real) & 0xF) * (1 << (scloudplus_logq - 4))) & 0xFFF;
+		w[2 * i] = ((uint16_t)(complex_round(tmp[i].real) & 0xF) * (1 << (SCLOUDPLUS_LOGQ - 4))) & 0xFFF;
 
-		w[2 * i + 1] = ((uint16_t)(fixed_round_to_int(tmp[i].imag) & 0xF) * (1 << (scloudplus_logq - 4))) & 0xFFF;
+		w[2 * i + 1] = ((uint16_t)(complex_round(tmp[i].imag) & 0xF) * (1 << (SCLOUDPLUS_LOGQ - 4))) & 0xFFF;
 	}
-#endif
+}
 }
 
 /**
@@ -214,48 +199,46 @@ static inline void compute_w(const Complex v[16], uint16_t w[32])
  * @param inout The input/output complex vector of length 16.
  *
  * This function reduces the lattice vector w to the complex vector v by
- * applying the modulus operation based on the value of scloudplus_tau.
+ * applying the modulus operation based on the value of SCLOUDPLUS_TAU.
  */
 static inline void reduce_w(Complex inout[16])
 {
-#if (scloudplus_tau == 3)
-    inout[0] = (Complex){FIX_FROM_INT(fixed_round_to_int(inout[0].real) & 0x7), FIX_FROM_INT(fixed_round_to_int(inout[0].imag) & 0x7)};
-    inout[3] = (Complex){FIX_FROM_INT(fixed_round_to_int(inout[3].real) & 0x3), FIX_FROM_INT(fixed_round_to_int(inout[3].imag) & 0x3)};
-    inout[5] = (Complex){FIX_FROM_INT(fixed_round_to_int(inout[5].real) & 0x3), FIX_FROM_INT(fixed_round_to_int(inout[5].imag) & 0x3)};
-    inout[6] = (Complex){FIX_FROM_INT(fixed_round_to_int(inout[6].real) & 0x3), FIX_FROM_INT(fixed_round_to_int(inout[6].imag) & 0x3)};
-    inout[9] = (Complex){FIX_FROM_INT(fixed_round_to_int(inout[9].real) & 0x3), FIX_FROM_INT(fixed_round_to_int(inout[9].imag) & 0x3)};
-    inout[10] = (Complex){FIX_FROM_INT(fixed_round_to_int(inout[10].real) & 0x3), FIX_FROM_INT(fixed_round_to_int(inout[10].imag) & 0x3)};
-    inout[12] = (Complex){FIX_FROM_INT(fixed_round_to_int(inout[12].real) & 0x3), FIX_FROM_INT(fixed_round_to_int(inout[12].imag) & 0x3)};
-    inout[15] = (Complex){FIX_FROM_INT(fixed_round_to_int(inout[15].real) & 0x1), FIX_FROM_INT(fixed_round_to_int(inout[15].imag) & 0x1)};
+    const int high_mask = (SCLOUDPLUS_TAU == 3) ? 0x7 : 0xF;
+    const int mid_mask = (SCLOUDPLUS_TAU == 3) ? 0x3 : 0x7;
+    const int low_mask = (SCLOUDPLUS_TAU == 3) ? 0x1 : 0x3;
+    const int high_indices[] = {0};
+    const int mid_indices[] = {3, 5, 6, 9, 10, 12};
+    const int low_indices[] = {15};
+    const int adjust_mid[] = {1, 2, 4, 8};
+    const int adjust_low[] = {7, 11, 13, 14};
 
-    inout[1] = reduce_component_pair(inout[1], 0x3, 0x7);
-    inout[2] = reduce_component_pair(inout[2], 0x3, 0x7);
-    inout[4] = reduce_component_pair(inout[4], 0x3, 0x7);
-    inout[8] = reduce_component_pair(inout[8], 0x3, 0x7);
-    inout[7] = reduce_component_pair(inout[7], 0x1, 0x3);
-    inout[11] = reduce_component_pair(inout[11], 0x1, 0x3);
-    inout[13] = reduce_component_pair(inout[13], 0x1, 0x3);
-    inout[14] = reduce_component_pair(inout[14], 0x1, 0x3);
-
-#elif (scloudplus_tau == 4)
-	inout[0] = (Complex){FIX_FROM_INT(fixed_round_to_int(inout[0].real) & 0xF), FIX_FROM_INT(fixed_round_to_int(inout[0].imag) & 0xF)};
-    inout[3] = (Complex){FIX_FROM_INT(fixed_round_to_int(inout[3].real) & 0x7), FIX_FROM_INT(fixed_round_to_int(inout[3].imag) & 0x7)};
-    inout[5] = (Complex){FIX_FROM_INT(fixed_round_to_int(inout[5].real) & 0x7), FIX_FROM_INT(fixed_round_to_int(inout[5].imag) & 0x7)};
-    inout[6] = (Complex){FIX_FROM_INT(fixed_round_to_int(inout[6].real) & 0x7), FIX_FROM_INT(fixed_round_to_int(inout[6].imag) & 0x7)};
-    inout[9] = (Complex){FIX_FROM_INT(fixed_round_to_int(inout[9].real) & 0x7), FIX_FROM_INT(fixed_round_to_int(inout[9].imag) & 0x7)};
-    inout[10] = (Complex){FIX_FROM_INT(fixed_round_to_int(inout[10].real) & 0x7), FIX_FROM_INT(fixed_round_to_int(inout[10].imag) & 0x7)};
-    inout[12] = (Complex){FIX_FROM_INT(fixed_round_to_int(inout[12].real) & 0x7), FIX_FROM_INT(fixed_round_to_int(inout[12].imag) & 0x7)};
-    inout[15] = (Complex){FIX_FROM_INT(fixed_round_to_int(inout[15].real) & 0x3), FIX_FROM_INT(fixed_round_to_int(inout[15].imag) & 0x3)};
-
-	inout[1] = reduce_component_pair(inout[1], 0x7, 0xF);
-	inout[2] = reduce_component_pair(inout[2], 0x7, 0xF);
-	inout[4] = reduce_component_pair(inout[4], 0x7, 0xF);
-	inout[8] = reduce_component_pair(inout[8], 0x7, 0xF);
-	inout[7] = reduce_component_pair(inout[7], 0x3, 0x7);
-	inout[11] = reduce_component_pair(inout[11], 0x3, 0x7);
-	inout[13] = reduce_component_pair(inout[13], 0x3, 0x7);
-	inout[14] = reduce_component_pair(inout[14], 0x3, 0x7);
-#endif
+    for (size_t i = 0; i < sizeof(high_indices) / sizeof(high_indices[0]); i++) {
+        int idx = high_indices[i];
+        inout[idx] = complex_from_int(complex_round(inout[idx].real) & high_mask,
+                                      complex_round(inout[idx].imag) & high_mask);
+    }
+    for (size_t i = 0; i < sizeof(mid_indices) / sizeof(mid_indices[0]); i++) {
+        int idx = mid_indices[i];
+        inout[idx] = complex_from_int(complex_round(inout[idx].real) & mid_mask,
+                                      complex_round(inout[idx].imag) & mid_mask);
+    }
+    for (size_t i = 0; i < sizeof(low_indices) / sizeof(low_indices[0]); i++) {
+        int idx = low_indices[i];
+        inout[idx] = complex_from_int(complex_round(inout[idx].real) & low_mask,
+                                      complex_round(inout[idx].imag) & low_mask);
+    }
+    for (size_t i = 0; i < sizeof(adjust_mid) / sizeof(adjust_mid[0]); i++) {
+        int idx = adjust_mid[i];
+        int mod = complex_round(inout[idx].imag) & mid_mask;
+        int sub = mod - complex_round(inout[idx].imag);
+        inout[idx] = complex_from_int((complex_round(inout[idx].real) + sub) & high_mask, mod);
+    }
+    for (size_t i = 0; i < sizeof(adjust_low) / sizeof(adjust_low[0]); i++) {
+        int idx = adjust_low[i];
+        int mod = complex_round(inout[idx].imag) & low_mask;
+        int sub = mod - complex_round(inout[idx].imag);
+        inout[idx] = complex_from_int((complex_round(inout[idx].real) + sub) & mid_mask, mod);
+    }
 }
 
 /**
@@ -265,7 +248,7 @@ static inline void reduce_w(Complex inout[16])
  *
  * This function recovers the message vector m from the complex vector v
  * by extracting the real and imaginary parts of v and combining them
- * based on the value of scloudplus_tau.
+ * based on the value of SCLOUDPLUS_TAU.
  */
 static inline void recover_m(const Complex v[16], uint8_t* m)
 {
@@ -278,10 +261,10 @@ static inline void recover_m(const Complex v[16], uint8_t* m)
     uint16_t vecv[32];
     for (int i = 0; i < 16; i++)
     {
-        vecv[2 * i] = (uint16_t)my_round(v[i].real);
-        vecv[2 * i + 1] = (uint16_t)my_round(v[i].imag);
+        vecv[2 * i] = complex_round(v[i].real);
+        vecv[2 * i + 1] = complex_round(v[i].imag);
     }
-#if (scloudplus_tau == 3)
+if (SCLOUDPLUS_TAU == 3) {
     memset(m, 0, 8);
     for (int i = 5; i >= 0; i--)
     {
@@ -315,7 +298,7 @@ static inline void recover_m(const Complex v[16], uint8_t* m)
     m[0] = m[0] | (vecv[A[2]] << 6);
     m[0] = m[0] | (vecv[A[1]] << 3);
     m[0] = m[0] | (vecv[A[0]] << 0);
-#elif (scloudplus_tau == 4)
+} else if (SCLOUDPLUS_TAU == 4) {
 	memset(m, 0, 12);
 	m[11] =
 		(vecv[C[5]] << 6) | (vecv[C[4]] << 4) | (vecv[C[3]] << 2) | (vecv[C[2]]);
@@ -333,7 +316,7 @@ static inline void recover_m(const Complex v[16], uint8_t* m)
 	m[2] = (vecv[A[5]] << 4) | (vecv[A[4]]);
 	m[1] = (vecv[A[3]] << 4) | (vecv[A[2]]);
 	m[0] = (vecv[A[1]] << 4) | (vecv[A[0]]);
-#endif
+}
 }
 
 /**
@@ -346,8 +329,8 @@ static inline void recover_m(const Complex v[16], uint8_t* m)
  */
 static inline void recover_v(const Complex w[16], Complex v[16])
 {
-    Complex tmp[16] = {{0, 0}};
-    Complex base = {FIX_FROM_INT(1) / 2, -(FIX_FROM_INT(1) / 2)};
+    Complex tmp[16] = {0};
+    Complex base = (Complex){COMPLEX_SCALE / 2, -COMPLEX_SCALE / 2};
     for (int i = 0; i < 16; i++)
     {
         tmp[i] = w[i];
@@ -393,14 +376,13 @@ static inline void recover_v(const Complex w[16], Complex v[16])
  * @param size The number of complex numbers in each set.
  * @return The Euclidean distance between the two sets of complex numbers.
  */
-static int64_t euclidean_distance(const Complex *set1, const Complex *set2,
-                                  int size)
+static int64_t euclidean_distance(Complex* set1, Complex* set2, int size)
 {
     int64_t sum = 0;
     for (int i = 0; i < size; i++)
     {
-        int64_t real_diff = (int64_t)set1[i].real - set2[i].real;
-        int64_t imag_diff = (int64_t)set1[i].imag - set2[i].imag;
+        int64_t real_diff = set1[i].real - set2[i].real;
+        int64_t imag_diff = set1[i].imag - set2[i].imag;
 
         sum += real_diff * real_diff + imag_diff * imag_diff;
     }
@@ -438,31 +420,54 @@ static int64_t euclidean_distance(const Complex *set1, const Complex *set2,
  * @param n The length of the input and output vectors.
  */
 
-SCLOUDPLUS_NOINLINE
-void bddbwn(Complex *t, Complex *y, int n)
+void bddbwn(Complex* t, Complex* y, int n)
 {
     int tlen = n >> 1;
     int halftlen = tlen >> 1;
-    Complex base1 = {FIX_FROM_INT(1), FIX_FROM_INT(1)};
-    Complex base0 = {FIX_FROM_INT(1) / 2, -(FIX_FROM_INT(1) / 2)};
+    Complex base1 = complex_from_int(1, 1);
+    Complex base0 = (Complex){COMPLEX_SCALE / 2, -COMPLEX_SCALE / 2};
+    Complex *t1 = NULL;
+    Complex *t2 = NULL;
+    Complex *y1 = NULL;
+    Complex *y2 = NULL;
+    Complex *z1 = NULL;
+    Complex *z2 = NULL;
+    Complex *z1in = NULL;
+    Complex *z2in = NULL;
+    Complex *out1 = NULL;
+    Complex *out2 = NULL;
+    int64_t d1;
+    int64_t d2;
 
     if (n == 2)
     {
-        y[0] = (Complex){FIX_FROM_INT(my_round(t[0].real)), FIX_FROM_INT(my_round(t[0].imag))};
+        y[0] = complex_from_int(complex_round(t[0].real), complex_round(t[0].imag));
         return;
     }
-    Complex t1[halftlen], t2[halftlen];
+    t1 = calloc((size_t)halftlen, sizeof(Complex));
+    t2 = calloc((size_t)halftlen, sizeof(Complex));
+    y1 = calloc((size_t)halftlen, sizeof(Complex));
+    y2 = calloc((size_t)halftlen, sizeof(Complex));
+    z1 = calloc((size_t)halftlen, sizeof(Complex));
+    z2 = calloc((size_t)halftlen, sizeof(Complex));
+    z1in = calloc((size_t)halftlen, sizeof(Complex));
+    z2in = calloc((size_t)halftlen, sizeof(Complex));
+    out1 = calloc((size_t)tlen, sizeof(Complex));
+    out2 = calloc((size_t)tlen, sizeof(Complex));
+    if (t1 == NULL || t2 == NULL || y1 == NULL || y2 == NULL || z1 == NULL ||
+        z2 == NULL || z1in == NULL || z2in == NULL || out1 == NULL || out2 == NULL) {
+        goto cleanup;
+    }
+
     for (int i = 0; i < halftlen; i++)
     {
         t1[i] = t[i];
         t2[i] = t[i + halftlen];
     }
 
-    Complex y1[halftlen], y2[halftlen];
     bddbwn(t1, y1, tlen);
     bddbwn(t2, y2, tlen);
 
-    Complex z1[halftlen], z2[halftlen], z1in[halftlen], z2in[halftlen];
     for (int i = 0; i < halftlen; i++)
     {
         z1in[i] = complex_mul(complex_sub(t2[i], y1[i]), base0);
@@ -476,10 +481,6 @@ void bddbwn(Complex *t, Complex *y, int n)
         z1[i] = complex_mul(z1[i], base1);
         z2[i] = complex_mul(z2[i], base1);
     }
-    Complex out1[tlen];
-    Complex out2[tlen];
-    memset(out1, 0, sizeof(out1));
-    memset(out2, 0, sizeof(out2));
     for (int i = 0; i < halftlen; i++)
     {
         out1[i] = y1[i];
@@ -487,8 +488,8 @@ void bddbwn(Complex *t, Complex *y, int n)
         out2[i] = complex_add(y2[i], z2[i]);
         out2[halftlen + i] = y2[i];
     }
-    int64_t d1 = euclidean_distance(out1, t, tlen);
-    int64_t d2 = euclidean_distance(out2, t, tlen);
+    d1 = euclidean_distance(out1, t, tlen);
+    d2 = euclidean_distance(out2, t, tlen);
 
     if (d1 < d2)
     {
@@ -504,19 +505,31 @@ void bddbwn(Complex *t, Complex *y, int n)
             y[i] = out2[i];
         }
     }
+
+cleanup:
+    free(t1);
+    free(t2);
+    free(y1);
+    free(y2);
+    free(z1);
+    free(z2);
+    free(z1in);
+    free(z2in);
+    free(out1);
+    free(out2);
 }
 
 void scloudplus_msgencode(const uint8_t* msg, uint16_t* matrixM)
 {
     uint8_t* msgPtr = (uint8_t*)msg;
     uint16_t* matrixMPtr = matrixM;
-    memset(matrixM, 0, scloudplus_mbar * scloudplus_nbar * sizeof(uint16_t));
+    memset(matrixM, 0, SCLOUDPLUS_MBAR * SCLOUDPLUS_NBAR * sizeof(uint16_t));
     Complex v[16];
-    for (int i = 0; i < scloudplus_subm; i++)
+    for (int i = 0; i < SCLOUDPLUS_SUBM; i++)
     {
         compute_v(msgPtr, v);
         compute_w(v, matrixMPtr);
-        msgPtr += scloudplus_mu >> 3;
+        msgPtr += SCLOUDPLUS_MU >> 3;
         matrixMPtr += 32;
     }
 }
@@ -525,20 +538,20 @@ void scloudplus_msgdecode(const uint16_t* matrixM, uint8_t* msg)
 {
     uint8_t* msgPtr = msg;
 
-    Complex w[16] = {{0, 0}};
-    Complex v[16] = {{0, 0}};
-    for (int i = 0; i < scloudplus_subm; i++)
+    Complex w[16] = {0};
+    Complex v[16] = {0};
+    for (int i = 0; i < SCLOUDPLUS_SUBM; i++)
     {
         for (int j = 0; j < 16; j++)
         {
-        	v[j] = (Complex){(int32_t)matrixM[32 * i + 2 * j] << scloudplus_tau,
-        	                 (int32_t)matrixM[32 * i + 2 * j + 1] << scloudplus_tau};
-        	w[j] = (Complex){0,0};
+        	v[j] = (Complex){(int64_t)matrixM[32 * i + 2 * j] * (1 << SCLOUDPLUS_TAU),
+			(int64_t)matrixM[32 * i + 2 * j + 1] * (1 << SCLOUDPLUS_TAU)};
+        	w[j] = (Complex){0, 0};
         }
         bddbwn(v, w, 32);
         recover_v(w, v);
         recover_m(v, msgPtr);
-        msgPtr += scloudplus_mu >> 3;
+        msgPtr += SCLOUDPLUS_MU >> 3;
     }
 }
 
@@ -553,7 +566,7 @@ void scloudplus_packpk(uint16_t* B, uint8_t* pk)
     uint8_t* ptrout = pk;
     uint32_t temp;
 
-    for (int i = 0; i < scloudplus_m * scloudplus_nbar; i = i + 2)
+    for (int i = 0; i < SCLOUDPLUS_M * SCLOUDPLUS_NBAR; i = i + 2)
     {
         temp = readu16tou32(ptrin);
         temp = (temp & 0xFFF) ^ ((temp >> 4) & 0xFFF000);
@@ -563,11 +576,11 @@ void scloudplus_packpk(uint16_t* B, uint8_t* pk)
     }
 }
 
-void scloudplus_unpackpk(const uint8_t* pk, uint16_t* B)
+void scloudplus_unpackpk(uint8_t* pk, uint16_t* B)
 {
-    const uint8_t* ptrin = pk;
+    uint8_t* ptrin = pk;
     uint16_t* ptrout = B;
-    for (int i = 0; i < scloudplus_m * scloudplus_nbar; i = i + 2)
+    for (int i = 0; i < SCLOUDPLUS_M * SCLOUDPLUS_NBAR; i = i + 2)
     {
         *ptrout = *(uint16_t*)ptrin & 0xFFF;
         *(ptrout + 1) = (*(uint16_t*)(ptrin + 1) >> 4) & 0xFFF;
@@ -581,7 +594,7 @@ void scloudplus_packsk(uint16_t* S, uint8_t* sk)
     uint16_t* ptrin = S;
     uint8_t* ptrout = sk;
     uint8_t temp;
-    for (int i = 0; i < scloudplus_n * scloudplus_nbar; i = i + 4)
+    for (int i = 0; i < SCLOUDPLUS_N * SCLOUDPLUS_NBAR; i = i + 4)
     {
         temp = 0;
         temp = (*ptrin & 0x03);
@@ -599,7 +612,7 @@ void scloudplus_unpacksk(uint8_t* sk, uint16_t* S)
     uint8_t* ptrin = sk;
     uint16_t* ptrout = S;
     int8_t temp;
-    for (int i = 0; i < scloudplus_n * scloudplus_nbar; i = i + 4)
+    for (int i = 0; i < SCLOUDPLUS_N * SCLOUDPLUS_NBAR; i = i + 4)
     {
         temp = *ptrin;
         *ptrout = (int16_t)((temp & 0x03) << 14) >> 14;
@@ -613,77 +626,77 @@ void scloudplus_unpacksk(uint8_t* sk, uint16_t* S)
 
 void scloudplus_compressc1(uint16_t* C, uint16_t* out)
 {
-#if (scloudplus_l == 128)
-    for (int i = 0; i < scloudplus_mbar * scloudplus_n; i++)
+if (SCLOUDPLUS_L == 128) {
+    for (int i = 0; i < SCLOUDPLUS_MBAR * SCLOUDPLUS_N; i++)
     {
         out[i] = ((((uint32_t)(C[i] & 0xFFF) << 9) + 2048) >> 12) & 0x1FF;
     }
-#elif (scloudplus_l == 192)
-	memcpy(out, C, scloudplus_mbar * scloudplus_n * sizeof(uint16_t));
-#elif (scloudplus_l == 256)
-	for (int i = 0; i < scloudplus_mbar * scloudplus_n; i++)
+} else if (SCLOUDPLUS_L == 192) {
+	memcpy(out, C, SCLOUDPLUS_MBAR * SCLOUDPLUS_N * sizeof(uint16_t));
+} else if (SCLOUDPLUS_L == 256) {
+	for (int i = 0; i < SCLOUDPLUS_MBAR * SCLOUDPLUS_N; i++)
 	{
 		out[i] = ((((uint32_t)(C[i] & 0xFFF) << 10) + 2048) >> 12) & 0x3FF;
 	}
-#endif
+}
 }
 
 void scloudplus_decompressc1(uint16_t* in, uint16_t* C)
 {
-#if (scloudplus_l == 128)
-    for (int i = 0; i < scloudplus_mbar * scloudplus_n; i++)
+if (SCLOUDPLUS_L == 128) {
+    for (int i = 0; i < SCLOUDPLUS_MBAR * SCLOUDPLUS_N; i++)
     {
         C[i] = ((uint32_t)((in[i] & 0x1FF) << 12) + 256) >> 9;
     }
-#elif (scloudplus_l == 192)
-	memcpy(C, in, scloudplus_mbar * scloudplus_n * sizeof(uint16_t));
-#elif (scloudplus_l == 256)
-	for (int i = 0; i < scloudplus_mbar * scloudplus_n; i++)
+} else if (SCLOUDPLUS_L == 192) {
+	memcpy(C, in, SCLOUDPLUS_MBAR * SCLOUDPLUS_N * sizeof(uint16_t));
+} else if (SCLOUDPLUS_L == 256) {
+	for (int i = 0; i < SCLOUDPLUS_MBAR * SCLOUDPLUS_N; i++)
 	{
 		C[i] = ((uint32_t)((in[i] & 0x3FF) << 12) + 512) >> 10;
 	}
-#endif
+}
 }
 
 void scloudplus_compressc2(uint16_t *C, uint16_t *out)
 {
     uint32_t remainder;
-#if (scloudplus_l == 128 || scloudplus_l == 256)
-    for (int i = 0; i < scloudplus_mbar * scloudplus_nbar; i++)
+if (SCLOUDPLUS_L == 128 || SCLOUDPLUS_L == 256) {
+    for (int i = 0; i < SCLOUDPLUS_MBAR * SCLOUDPLUS_NBAR; i++)
     {
         uint32_t temp = ((((uint32_t)(C[i] & 0xFFF) << 7) + 2048) >> 12);
         remainder = (C[i]%64==48);
         out[i] = (temp - remainder) & 0x7F;
     }
-#elif (scloudplus_l == 192)
-    for (int i = 0; i < scloudplus_mbar * scloudplus_nbar; i++)
+} else if (SCLOUDPLUS_L == 192) {
+    for (int i = 0; i < SCLOUDPLUS_MBAR * SCLOUDPLUS_NBAR; i++)
     {
         uint32_t temp = ((((uint32_t)(C[i] & 0xFFF) << 10) + 2048) >> 12);
         remainder = (C[i]%8==6);
         out[i] = (temp - remainder) & 0x3FF;
     }
-#endif
+}
 }
 
 void scloudplus_decompressc2(uint16_t* in, uint16_t* C)
 {
-#if (scloudplus_l == 128 || scloudplus_l == 256)
-    for (int i = 0; i < scloudplus_mbar * scloudplus_nbar; i++)
+if (SCLOUDPLUS_L == 128 || SCLOUDPLUS_L == 256) {
+    for (int i = 0; i < SCLOUDPLUS_MBAR * SCLOUDPLUS_NBAR; i++)
     {
         C[i] = ((uint32_t)((in[i] & 0x7F) << 12) + 64) >> 7;
     }
-#elif (scloudplus_l == 192)
-	for (int i = 0; i < scloudplus_mbar * scloudplus_nbar; i++)
+} else if (SCLOUDPLUS_L == 192) {
+	for (int i = 0; i < SCLOUDPLUS_MBAR * SCLOUDPLUS_NBAR; i++)
 	{
 		C[i] = ((uint32_t)((in[i] & 0x3FF) << 12) + 512) >> 10;
 	}
-#endif
+}
 }
 
 void scloudplus_packc1(uint16_t* C, uint8_t* out)
 {
-#if (scloudplus_l == 128)
-    int inlen = scloudplus_mbar * scloudplus_n;
+if (SCLOUDPLUS_L == 128) {
+    int inlen = SCLOUDPLUS_MBAR * SCLOUDPLUS_N;
     uint8_t* ptrin = (uint8_t*)C;
     for (int i = 0; i < inlen; i++)
     {
@@ -696,11 +709,11 @@ void scloudplus_packc1(uint16_t* C, uint8_t* out)
             out[inlen + i] = (out[inlen + i] << 1) | ptrin[16 * i + 2 * j + 1];
         }
     }
-#elif (scloudplus_l == 192)
+} else if (SCLOUDPLUS_L == 192) {
 	uint16_t *ptrin = C;
 	uint8_t *ptrout = out;
 	uint32_t temp;
-	for (int i = 0; i < scloudplus_mbar * scloudplus_n; i = i + 2)
+	for (int i = 0; i < SCLOUDPLUS_MBAR * SCLOUDPLUS_N; i = i + 2)
 	{
 		temp = readu16tou32(ptrin);
 		temp = (temp & 0xFFF) ^ ((temp >> 4) & 0xFFF000);
@@ -708,8 +721,8 @@ void scloudplus_packc1(uint16_t* C, uint8_t* out)
 		ptrin = ptrin + 2;
 		ptrout = ptrout + 3;
 	}
-#elif (scloudplus_l == 256)
-	int inlen = scloudplus_mbar * scloudplus_n;
+} else if (SCLOUDPLUS_L == 256) {
+	int inlen = SCLOUDPLUS_MBAR * SCLOUDPLUS_N;
 	uint8_t *ptrin = (uint8_t *)C;
 	for (int i = 0; i < inlen; i++)
 	{
@@ -722,13 +735,13 @@ void scloudplus_packc1(uint16_t* C, uint8_t* out)
 			out[inlen + i] = (out[inlen + i] << 2) | ptrin[8 * i + 2 * j + 1];
 		}
 	}
-#endif
+}
 }
 
 void scloudplus_unpackc1(uint8_t* in, uint16_t* C)
 {
-#if (scloudplus_l == 128)
-    int outlen = scloudplus_mbar * scloudplus_n;
+if (SCLOUDPLUS_L == 128) {
+    int outlen = SCLOUDPLUS_MBAR * SCLOUDPLUS_N;
     for (int i = 0; i < outlen; i++)
     {
         C[i] = (uint16_t)in[i];
@@ -744,18 +757,18 @@ void scloudplus_unpackc1(uint8_t* in, uint16_t* C)
         C[8 * i + 6] = C[8 * i + 6] | (((uint16_t)in[outlen + i] << 7) & 0x100);
         C[8 * i + 7] = C[8 * i + 7] | (((uint16_t)in[outlen + i] << 8) & 0x100);
     }
-#elif (scloudplus_l == 192)
+} else if (SCLOUDPLUS_L == 192) {
 	uint8_t *ptrin = in;
 	uint16_t *ptrout = C;
-	for (int i = 0; i < scloudplus_mbar * scloudplus_n; i = i + 2)
+	for (int i = 0; i < SCLOUDPLUS_MBAR * SCLOUDPLUS_N; i = i + 2)
 	{
 		*ptrout = *(uint16_t *)ptrin & 0xFFF;
 		*(ptrout + 1) = (*(uint16_t *)(ptrin + 1) >> 4) & 0xFFF;
 		ptrin = ptrin + 3;
 		ptrout = ptrout + 2;
 	}
-#elif (scloudplus_l == 256)
-	int outlen = scloudplus_mbar * scloudplus_n;
+} else if (SCLOUDPLUS_L == 256) {
+	int outlen = SCLOUDPLUS_MBAR * SCLOUDPLUS_N;
 	for (int i = 0; i < outlen; i++)
 	{
 		C[i] = (uint16_t)in[i];
@@ -767,15 +780,15 @@ void scloudplus_unpackc1(uint8_t* in, uint16_t* C)
 		C[4 * i + 2] = C[4 * i + 2] | (((uint16_t)in[outlen + i] << 6) & 0x300);
 		C[4 * i + 3] = C[4 * i + 3] | (((uint16_t)in[outlen + i] << 8) & 0x300);
 	}
-#endif
+}
 }
 
 void scloudplus_packc2(uint16_t* C, uint8_t* out)
 {
-#if (scloudplus_l == 128)
+if (SCLOUDPLUS_L == 128) {
     uint16_t* ptrin = C;
     uint8_t* ptrout = out;
-    int inlen = scloudplus_mbar * scloudplus_nbar;
+    int inlen = SCLOUDPLUS_MBAR * SCLOUDPLUS_NBAR;
     for (int i = 0; i < inlen; i = i + 8)
     {
         *ptrout = ((*ptrin) & 0x7F) | (*(ptrin + 1) << 7); // 7+1
@@ -788,8 +801,8 @@ void scloudplus_packc2(uint16_t* C, uint8_t* out)
         ptrin = ptrin + 8;
         ptrout = ptrout + 7;
     }
-#elif (scloudplus_l == 192)
-	int inlen = scloudplus_mbar * scloudplus_nbar;
+} else if (SCLOUDPLUS_L == 192) {
+	int inlen = SCLOUDPLUS_MBAR * SCLOUDPLUS_NBAR;
 	uint8_t *ptrin = (uint8_t *)C;
 	for (int i = 0; i < inlen; i++)
 	{
@@ -802,11 +815,11 @@ void scloudplus_packc2(uint16_t* C, uint8_t* out)
 			out[inlen + i] = (out[inlen + i] << 2) | ptrin[8 * i + 2 * j + 1];
 		}
 	}
-#elif (scloudplus_l == 256)
+} else if (SCLOUDPLUS_L == 256) {
 	uint16_t *ptrin = C;
 	uint8_t *ptrout = out;
-	int inlen = scloudplus_mbar * scloudplus_nbar -
-				((scloudplus_mbar * scloudplus_nbar) & 0x7);
+	int inlen = SCLOUDPLUS_MBAR * SCLOUDPLUS_NBAR -
+				((SCLOUDPLUS_MBAR * SCLOUDPLUS_NBAR) & 0x7);
 	for (int i = 0; i < inlen; i = i + 8)
 	{
 		*ptrout = ((*ptrin) & 0x7F) | (*(ptrin + 1) << 7);					// 7+1
@@ -823,15 +836,15 @@ void scloudplus_packc2(uint16_t* C, uint8_t* out)
 	*(ptrout + 1) = ((*(ptrin + 1) >> 1) & 0x3F) | (*(ptrin + 2) << 6);
 	*(ptrout + 2) = ((*(ptrin + 2) >> 2) & 0x1F) | (*(ptrin + 3) << 5);
 	*(ptrout + 3) = ((*(ptrin + 3) >> 3) & 0x0F);
-#endif
+}
 }
 
 void scloudplus_unpackc2(uint8_t* in, uint16_t* C)
 {
-#if (scloudplus_l == 128)
+if (SCLOUDPLUS_L == 128) {
     uint8_t* ptrin = in;
     uint16_t* ptrout = C;
-    int outlen = scloudplus_mbar * scloudplus_nbar;
+    int outlen = SCLOUDPLUS_MBAR * SCLOUDPLUS_NBAR;
     for (int i = 0; i < outlen; i = i + 8)
     {
         *ptrout = *ptrin & 0x7F;
@@ -845,8 +858,8 @@ void scloudplus_unpackc2(uint8_t* in, uint16_t* C)
         ptrin = ptrin + 7;
         ptrout = ptrout + 8;
     }
-#elif (scloudplus_l == 192)
-	int outlen = scloudplus_mbar * scloudplus_nbar;
+} else if (SCLOUDPLUS_L == 192) {
+	int outlen = SCLOUDPLUS_MBAR * SCLOUDPLUS_NBAR;
 	for (int i = 0; i < outlen; i++)
 	{
 		C[i] = (uint16_t)in[i];
@@ -858,11 +871,11 @@ void scloudplus_unpackc2(uint8_t* in, uint16_t* C)
 		C[4 * i + 2] = C[4 * i + 2] | (((uint16_t)in[outlen + i] << 6) & 0x300);
 		C[4 * i + 3] = C[4 * i + 3] | (((uint16_t)in[outlen + i] << 8) & 0x300);
 	}
-#elif (scloudplus_l == 256)
+} else if (SCLOUDPLUS_L == 256) {
 	uint8_t *ptrin = in;
 	uint16_t *ptrout = C;
-	int outlen = scloudplus_mbar * scloudplus_nbar -
-				 ((scloudplus_mbar * scloudplus_nbar) & 0x7);
+	int outlen = SCLOUDPLUS_MBAR * SCLOUDPLUS_NBAR -
+				 ((SCLOUDPLUS_MBAR * SCLOUDPLUS_NBAR) & 0x7);
 	for (int i = 0; i < outlen; i = i + 8)
 	{
 		*ptrout = *ptrin & 0x7F;
@@ -880,5 +893,5 @@ void scloudplus_unpackc2(uint8_t* in, uint16_t* C)
 	*(ptrout + 1) = (*(uint16_t *)ptrin >> 7) & 0x7F;
 	*(ptrout + 2) = (*(uint16_t *)(ptrin + 1) >> 6) & 0x7F;
 	*(ptrout + 3) = (*(uint16_t *)(ptrin + 2) >> 5) & 0x7F;
-#endif
+}
 }

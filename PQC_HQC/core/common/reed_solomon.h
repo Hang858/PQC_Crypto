@@ -1,14 +1,10 @@
-#ifndef PQC_HQC_REED_SOLOMON_SELECTOR_H
-#define PQC_HQC_REED_SOLOMON_SELECTOR_H
+#ifndef HQC_REED_SOLOMON_H
+#define HQC_REED_SOLOMON_H
 
-#if defined(HQC_LEVEL_HQC1)
-#include "../hqc1/reed_solomon.h"
-#elif defined(HQC_LEVEL_HQC3)
-#include "../hqc3/reed_solomon.h"
-#elif defined(HQC_LEVEL_HQC5)
-#include "../hqc5/reed_solomon.h"
-#else
-#error "HQC level selection macro is not defined"
-#endif
+#include <stdint.h>
+
+void reed_solomon_encode(uint64_t *cdw, const uint64_t *msg);
+void reed_solomon_decode(uint64_t *msg, uint64_t *cdw);
+void compute_generator_poly(uint16_t *poly);
 
 #endif

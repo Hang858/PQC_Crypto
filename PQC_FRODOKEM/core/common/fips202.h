@@ -2,9 +2,8 @@
 #define FIPS202_H
 
 #include <stdint.h>
-#ifdef USE_HARDWARE_HASH
-#include "hash_operator.h"
-#endif
+#include <stddef.h>
+#include "operator_interface.h"
 
 #define SHAKE128_RATE 168
 #define SHAKE256_RATE 136

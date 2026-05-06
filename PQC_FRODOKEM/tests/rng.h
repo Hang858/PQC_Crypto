@@ -10,9 +10,9 @@
 #define rng_h
 
 #include <stdio.h>
-#include "../src/config.h"
+#include "config.h"
 #if !defined(USE_OPENSSL)
-    #include "../../common/aes/aes.h"
+    #include "aes.h"
 #else
     #include "../../common/aes/aes_openssl.h"
 #endif

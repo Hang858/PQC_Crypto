@@ -2,7 +2,6 @@
 #define _SCLOUDPLUS_SAMPLE_H_
 #include "aes.h"
 #include "param.h"
-#include "level_namespace.h"
 void scloudplus_mul_add_as_e(const uint8_t *seedA, const uint16_t *S,
 							 const uint16_t *E, uint16_t *B);
 void scloudplus_mul_add_sa_e(const uint8_t *seedA, const uint16_t *S,

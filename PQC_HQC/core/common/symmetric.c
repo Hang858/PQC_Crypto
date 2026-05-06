@@ -7,27 +7,12 @@
 #include "symmetric.h"
 #include <stdint.h>
 
-static const hqc_params_t *resolve_params(const hqc_params_t *params) {
-    if (params != NULL) {
-        return params;
-    }
-#if defined(HQC_LEVEL_HQC1)
-    return HQC_get_params(HQC_1);
-#elif defined(HQC_LEVEL_HQC3)
-    return HQC_get_params(HQC_3);
-#elif defined(HQC_LEVEL_HQC5)
-    return HQC_get_params(HQC_5);
-#else
-    return NULL;
-#endif
-}
-
 /**
  * @typedef shake256_prng_ctx
  * @brief Incremental SHAKE-256 prng context.
  *
  */
-static shake256incctx shake256_prng_ctx;
+shake256incctx shake256_prng_ctx;
 
 /**
  * @brief SHAKE-256 with incremental API and domain separation
@@ -124,12 +109,11 @@ void hash_i(uint8_t *output, const uint8_t *seed) {
  * @param[out] output      Buffer (32 bytes) to receive the hash output.
  * @param[in]  ek_kem      Encapsulation key of the KEM.
  */
-void hash_h_param(const hqc_params_t *params, uint8_t *output, const uint8_t *ek_kem) {
-    params = resolve_params(params);
+void hash_h(uint8_t *output, const uint8_t *ek_kem) {
     sha3_256_ctx h_hash_ctx = {0};
     uint8_t h_domain = HQC_H_FCT_DOMAIN;
     sha3_256_inc_init(&h_hash_ctx);
-    sha3_256_inc_absorb(&h_hash_ctx, ek_kem, params->publickeybytes);
+    sha3_256_inc_absorb(&h_hash_ctx, ek_kem, PUBLIC_KEY_BYTES);
     sha3_256_inc_absorb(&h_hash_ctx, &h_domain, 1);
     sha3_256_inc_finalize(output, &h_hash_ctx);
 }
@@ -142,15 +126,13 @@ void hash_h_param(const hqc_params_t *params, uint8_t *output, const uint8_t *ek
  * @param[in]  m             Message bytes.
  * @param[in]  salt          Salt value.
  */
-void hash_g_param(const hqc_params_t *params, uint8_t *output, const uint8_t *hash_ek_kem, const uint8_t *m,
-                  const uint8_t *salt) {
-    params = resolve_params(params);
+void hash_g(uint8_t *output, const uint8_t hash_ek_kem[SEED_BYTES], const uint8_t *m, const uint8_t salt[SALT_BYTES]) {
     sha3_512_ctx g_hash_ctx = {0};
     uint8_t i_domain = HQC_G_FCT_DOMAIN;
     sha3_512_inc_init(&g_hash_ctx);
-    sha3_512_inc_absorb(&g_hash_ctx, hash_ek_kem, params->seed_bytes);
-    sha3_512_inc_absorb(&g_hash_ctx, m, params->security_bytes);
-    sha3_512_inc_absorb(&g_hash_ctx, salt, params->salt_bytes);
+    sha3_512_inc_absorb(&g_hash_ctx, hash_ek_kem, SEED_BYTES);
+    sha3_512_inc_absorb(&g_hash_ctx, m, PARAM_SECURITY_BYTES);
+    sha3_512_inc_absorb(&g_hash_ctx, salt, SALT_BYTES);
     sha3_512_inc_absorb(&g_hash_ctx, &i_domain, 1);
     sha3_512_inc_finalize(output, &g_hash_ctx);
 }
@@ -163,31 +145,16 @@ void hash_g_param(const hqc_params_t *params, uint8_t *output, const uint8_t *ha
  * @param[in]  sigma        The string sigma.
  * @param[in]  c_kem        Pointer to ciphertext struct (includes c_pke.u, c_pke.v, and salt).
  */
-void hash_j_param(const hqc_params_t *params, uint8_t *output, const uint8_t *hash_ek_kem, const uint8_t *sigma,
-                  const ciphertext_kem_t *c_kem) {
-    params = resolve_params(params);
+void hash_j(uint8_t *output, const uint8_t hash_ek_kem[SEED_BYTES], const uint8_t *sigma,
+            const ciphertext_kem_t *c_kem) {
     sha3_256_ctx k_hash_ctx = {0};
     uint8_t k_domain = HQC_J_FCT_DOMAIN;
     sha3_256_inc_init(&k_hash_ctx);
-    sha3_256_inc_absorb(&k_hash_ctx, hash_ek_kem, params->seed_bytes);
-    sha3_256_inc_absorb(&k_hash_ctx, sigma, params->security_bytes);
-    sha3_256_inc_absorb(&k_hash_ctx, (uint8_t *)c_kem->c_pke.u, params->vec_n_size_bytes);
-    sha3_256_inc_absorb(&k_hash_ctx, (uint8_t *)c_kem->c_pke.v, params->vec_n1n2_size_bytes);
-    sha3_256_inc_absorb(&k_hash_ctx, c_kem->salt, params->salt_bytes);
+    sha3_256_inc_absorb(&k_hash_ctx, hash_ek_kem, SEED_BYTES);
+    sha3_256_inc_absorb(&k_hash_ctx, sigma, PARAM_SECURITY_BYTES);
+    sha3_256_inc_absorb(&k_hash_ctx, (uint8_t *)c_kem->c_pke.u, VEC_N_SIZE_BYTES);
+    sha3_256_inc_absorb(&k_hash_ctx, (uint8_t *)c_kem->c_pke.v, VEC_N1N2_SIZE_BYTES);
+    sha3_256_inc_absorb(&k_hash_ctx, c_kem->salt, SALT_BYTES);
     sha3_256_inc_absorb(&k_hash_ctx, &k_domain, 1);
     sha3_256_inc_finalize(output, &k_hash_ctx);
-}
-
-void hash_h(uint8_t *output, const uint8_t ek_kem[PUBLIC_KEY_BYTES]) {
-    hash_h_param(NULL, output, ek_kem);
-}
-
-void hash_g(uint8_t *output, const uint8_t hash_ek_kem[SEED_BYTES], const uint8_t m[PARAM_SECURITY_BYTES],
-            const uint8_t salt[SALT_BYTES]) {
-    hash_g_param(NULL, output, hash_ek_kem, m, salt);
-}
-
-void hash_j(uint8_t *output, const uint8_t hash_ek_kem[SEED_BYTES], const uint8_t sigma[PARAM_SECURITY_BYTES],
-            const ciphertext_kem_t *c_kem) {
-    hash_j_param(NULL, output, hash_ek_kem, sigma, c_kem);
 }

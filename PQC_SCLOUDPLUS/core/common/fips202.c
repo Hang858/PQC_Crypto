@@ -19,7 +19,6 @@
  *
  * Returns the loaded 64-bit unsigned integer
  **************************************************/
-#ifndef USE_HARDWARE_HASH
 static uint64_t load64(const uint8_t x[8])
 {
 	unsigned int i;
@@ -334,7 +333,6 @@ static void KeccakF1600_StatePermute(uint64_t state[25])
 	state[23] = Aso;
 	state[24] = Asu;
 }
-#endif
 
 /*************************************************
  * Name:        keccak_init
@@ -343,7 +341,6 @@ static void KeccakF1600_StatePermute(uint64_t state[25])
  *
  * Arguments:   - uint64_t *s: pointer to Keccak state
  **************************************************/
-#ifndef USE_HARDWARE_HASH
 static void keccak_init(uint64_t s[25])
 {
 	unsigned int i;
@@ -504,7 +501,6 @@ static void keccak_squeezeblocks(uint8_t *out, size_t nblocks, uint64_t s[25],
 		nblocks -= 1;
 	}
 }
-#endif
 
 /*************************************************
  * Name:        shake128_init
@@ -516,7 +512,7 @@ static void keccak_squeezeblocks(uint8_t *out, size_t nblocks, uint64_t s[25],
 #ifdef USE_HARDWARE_HASH
 void shake128_init(keccak_state *state)
 {
-	OP_hash_init(OP_ALG_SHAKE128, state->s, 200 + 8);
+    OP_hash_init(OP_ALG_SHAKE128, state->s, 200+8);
 }
 #else
 void shake128_init(keccak_state *state)
@@ -539,7 +535,7 @@ void shake128_init(keccak_state *state)
 #ifdef USE_HARDWARE_HASH
 void shake128_absorb(keccak_state *state, const uint8_t *in, size_t inlen)
 {
-	OP_hash_absorb(OP_ALG_SHAKE128, (void *)state->s, 200 + 8, (void *)in, (int)inlen);
+    OP_hash_absorb(OP_ALG_SHAKE128, (void*)state->s, 200+8, (void*)in, inlen);
 }
 #else
 void shake128_absorb(keccak_state *state, const uint8_t *in, size_t inlen)
@@ -547,7 +543,6 @@ void shake128_absorb(keccak_state *state, const uint8_t *in, size_t inlen)
 	state->pos = keccak_absorb(state->s, state->pos, SHAKE128_RATE, in, inlen);
 }
 #endif
-
 /*************************************************
  * Name:        shake128_finalize
  *
@@ -558,7 +553,7 @@ void shake128_absorb(keccak_state *state, const uint8_t *in, size_t inlen)
 #ifdef USE_HARDWARE_HASH
 void shake128_finalize(keccak_state *state)
 {
-	(void)state;
+	state->pos = SHAKE128_RATE;
 }
 #else
 void shake128_finalize(keccak_state *state)
@@ -567,7 +562,6 @@ void shake128_finalize(keccak_state *state)
 	state->pos = SHAKE128_RATE;
 }
 #endif
-
 /*************************************************
  * Name:        shake128_squeeze
  *
@@ -582,7 +576,7 @@ void shake128_finalize(keccak_state *state)
 #ifdef USE_HARDWARE_HASH
 void shake128_squeeze(uint8_t *out, size_t outlen, keccak_state *state)
 {
-	OP_hash_squeeze(OP_ALG_SHAKE128, (void *)state->s, 200 + 8, (void *)out, (int)outlen);
+	OP_hash_squeeze(OP_ALG_SHAKE128, (void*)state->s, 200+8, (void*)out, outlen);
 }
 #else
 void shake128_squeeze(uint8_t *out, size_t outlen, keccak_state *state)
@@ -590,7 +584,6 @@ void shake128_squeeze(uint8_t *out, size_t outlen, keccak_state *state)
 	state->pos = keccak_squeeze(out, outlen, state->s, state->pos, SHAKE128_RATE);
 }
 #endif
-
 /*************************************************
  * Name:        shake128_absorb_once
  *
@@ -606,8 +599,8 @@ void shake128_squeeze(uint8_t *out, size_t outlen, keccak_state *state)
 void shake128_absorb_once(keccak_state *state, const uint8_t *in,
 						  size_t inlen)
 {
-	OP_hash_init(OP_ALG_SHAKE128, state->s, 200 + 8);
-	OP_hash_absorb(OP_ALG_SHAKE128, (void *)state->s, 200 + 8, (void *)in, (int)inlen);
+	OP_hash_init(OP_ALG_SHAKE128, state->s, 200+8);
+	OP_hash_absorb(OP_ALG_SHAKE128, (void*)state->s, 200+8, (void*)in, inlen);
 }
 #else
 void shake128_absorb_once(keccak_state *state, const uint8_t *in,
@@ -617,7 +610,6 @@ void shake128_absorb_once(keccak_state *state, const uint8_t *in,
 	state->pos = SHAKE128_RATE;
 }
 #endif
-
 /*************************************************
  * Name:        shake128_squeezeblocks
  *
@@ -653,7 +645,7 @@ void shake128_squeezeblocks(uint8_t *out, size_t nblocks, keccak_state *state)
 #ifdef USE_HARDWARE_HASH
 void shake256_init(keccak_state *state)
 {
-	OP_hash_init(OP_ALG_SHAKE256, state->s, 200 + 8);
+	OP_hash_init(OP_ALG_SHAKE256, state->s, 200+8);
 }
 #else
 void shake256_init(keccak_state *state)
@@ -676,7 +668,7 @@ void shake256_init(keccak_state *state)
 #ifdef USE_HARDWARE_HASH
 void shake256_absorb(keccak_state *state, const uint8_t *in, size_t inlen)
 {
-	OP_hash_absorb(OP_ALG_SHAKE256, (void *)state->s, 200 + 8, (void *)in, (int)inlen);
+	OP_hash_absorb(OP_ALG_SHAKE256, (void*)state->s, 200+8, (void*)in, inlen);
 }
 #else
 void shake256_absorb(keccak_state *state, const uint8_t *in, size_t inlen)
@@ -695,7 +687,7 @@ void shake256_absorb(keccak_state *state, const uint8_t *in, size_t inlen)
 #ifdef USE_HARDWARE_HASH
 void shake256_finalize(keccak_state *state)
 {
-	(void)state;
+	state->pos = SHAKE256_RATE;
 }
 #else
 void shake256_finalize(keccak_state *state)
@@ -719,7 +711,7 @@ void shake256_finalize(keccak_state *state)
 #ifdef USE_HARDWARE_HASH
 void shake256_squeeze(uint8_t *out, size_t outlen, keccak_state *state)
 {
-	OP_hash_squeeze(OP_ALG_SHAKE256, (void *)state->s, 200 + 8, (void *)out, (int)outlen);
+	OP_hash_squeeze(OP_ALG_SHAKE256, (void*)state->s, 200+8, (void*)out, outlen);
 }
 #else
 void shake256_squeeze(uint8_t *out, size_t outlen, keccak_state *state)
@@ -727,7 +719,6 @@ void shake256_squeeze(uint8_t *out, size_t outlen, keccak_state *state)
 	state->pos = keccak_squeeze(out, outlen, state->s, state->pos, SHAKE256_RATE);
 }
 #endif
-
 /*************************************************
  * Name:        shake256_absorb_once
  *
@@ -743,8 +734,9 @@ void shake256_squeeze(uint8_t *out, size_t outlen, keccak_state *state)
 void shake256_absorb_once(keccak_state *state, const uint8_t *in,
 						  size_t inlen)
 {
-	OP_hash_init(OP_ALG_SHAKE256, state->s, 200 + 8);
-	OP_hash_absorb(OP_ALG_SHAKE256, (void *)state->s, 200 + 8, (void *)in, (int)inlen);
+	OP_hash_init(OP_ALG_SHAKE256, state->s, 200+8);
+	OP_hash_absorb(OP_ALG_SHAKE256, (void*)state->s, 200+8, (void*)in, inlen);
+	return;
 }
 #else
 void shake256_absorb_once(keccak_state *state, const uint8_t *in,
@@ -792,19 +784,7 @@ void shake256_squeezeblocks(uint8_t *out, size_t nblocks, keccak_state *state)
  **************************************************/
 void shake128(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen)
 {
-#ifdef USE_HARDWARE_HASH
 	OP_hash(OP_ALG_SHAKE128, OP_MODE_NORMAL, (int)outlen, (void *)in, (int)inlen, 0, out);
-#else
-	size_t nblocks;
-	keccak_state state;
-
-	shake128_absorb_once(&state, in, inlen);
-	nblocks = outlen / SHAKE128_RATE;
-	shake128_squeezeblocks(out, nblocks, &state);
-	outlen -= nblocks * SHAKE128_RATE;
-	out += nblocks * SHAKE128_RATE;
-	shake128_squeeze(out, outlen, &state);
-#endif
 }
 
 /*************************************************
@@ -819,19 +799,7 @@ void shake128(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen)
  **************************************************/
 void shake256(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen)
 {
-#ifdef USE_HARDWARE_HASH
 	OP_hash(OP_ALG_SHAKE256, OP_MODE_NORMAL, (int)outlen, (void *)in, (int)inlen, 0, out);
-#else
-	size_t nblocks;
-	keccak_state state;
-
-	shake256_absorb_once(&state, in, inlen);
-	nblocks = outlen / SHAKE256_RATE;
-	shake256_squeezeblocks(out, nblocks, &state);
-	outlen -= nblocks * SHAKE256_RATE;
-	out += nblocks * SHAKE256_RATE;
-	shake256_squeeze(out, outlen, &state);
-#endif
 }
 
 /*************************************************
@@ -843,11 +811,14 @@ void shake256(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen)
  *              - const uint8_t *in: pointer to input
  *              - size_t inlen: length of input in bytes
  **************************************************/
+#ifdef USE_HARDWARE_HASH
 void sha3_256(uint8_t h[32], const uint8_t *in, size_t inlen)
 {
-#ifdef USE_HARDWARE_HASH
 	OP_hash(OP_ALG_SHA3_256, OP_MODE_NORMAL, 32, (void *)in, (int)inlen, 0, h);
+}
 #else
+void sha3_256(uint8_t h[32], const uint8_t *in, size_t inlen)
+{
 	unsigned int i;
 	uint64_t s[25];
 
@@ -855,8 +826,8 @@ void sha3_256(uint8_t h[32], const uint8_t *in, size_t inlen)
 	KeccakF1600_StatePermute(s);
 	for (i = 0; i < 4; i++)
 		store64(h + 8 * i, s[i]);
-#endif
 }
+#endif
 
 /*************************************************
  * Name:        sha3_512
@@ -867,21 +838,22 @@ void sha3_256(uint8_t h[32], const uint8_t *in, size_t inlen)
  *              - const uint8_t *in: pointer to input
  *              - size_t inlen: length of input in bytes
  **************************************************/
+#ifdef USE_HARDWARE_HASH
 void sha3_512(uint8_t h[64], const uint8_t *in, size_t inlen)
 {
-#ifdef USE_HARDWARE_HASH
 	OP_hash(OP_ALG_SHA3_512, OP_MODE_NORMAL, 64, (void *)in, (int)inlen, 0, h);
+}
 #else
+void sha3_512(uint8_t h[64], const uint8_t *in, size_t inlen)
+{	
 	unsigned int i;
 	uint64_t s[25];
-
 	keccak_absorb_once(s, SHA3_512_RATE, in, inlen, 0x06);
 	KeccakF1600_StatePermute(s);
 	for (i = 0; i < 8; i++)
-		store64(h + 8 * i, s[i]);
-#endif
+		store64(h + 8 * i, s[i]);		
 }
-
+#endif
 void scloudplus_F(unsigned char *output, unsigned long long outlen,
 				  const unsigned char *input, unsigned long long inlen)
 {

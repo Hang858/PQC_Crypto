@@ -8,7 +8,6 @@
 
 #include <stdint.h>
 #include "parameters.h"
-#include "level_namespace.h"
 
 /**
  * @brief Public-key encryption ciphertext.
@@ -17,8 +16,8 @@
  * - v: length VEC_N_SIZE_64 words
  */
 typedef struct {
-    uint64_t u[VEC_N_SIZE_64]; /**< first vector half */
-    uint64_t v[VEC_N_SIZE_64]; /**< second vector half */
+    uint64_t u[HQC_MAX_VEC_N_SIZE_64]; /**< first vector half */
+    uint64_t v[HQC_MAX_VEC_N_SIZE_64]; /**< second vector half */
 } ciphertext_pke_t;
 
 /**
@@ -30,7 +29,7 @@ typedef struct {
  */
 typedef struct {
     ciphertext_pke_t c_pke;   /**< embedded PKE ciphertext */
-    uint8_t salt[SALT_BYTES]; /**< per-encapsulation salt */
+    uint8_t salt[HQC_SALT_BYTES]; /**< per-encapsulation salt */
 } ciphertext_kem_t;
 
 /**

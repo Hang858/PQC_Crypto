@@ -8,8 +8,6 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include "parameters.h"
-#include "level_namespace.h"
 
 /**
  * Powers of the root alpha of 1 + x^2 + x^3 + x^4 + x^8.

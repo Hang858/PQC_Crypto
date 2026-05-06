@@ -8,18 +8,7 @@
 
 //#include <immintrin.h>
 #include <stdint.h>
-#include "hqc_params.h"
 #include "symmetric.h"
-#include "level_namespace.h"
-
-void vect_generate_random_support1_param(const hqc_params_t *params, shake256_xof_ctx *ctx, uint32_t *support, uint16_t weight);
-void vect_generate_random_support2_param(const hqc_params_t *params, shake256_xof_ctx *ctx, uint32_t *support, uint16_t weight);
-void vect_write_support_to_vector_param(const hqc_params_t *params, uint64_t *v, uint32_t *support, uint16_t weight);
-void vect_sample_fixed_weight1_param(const hqc_params_t *params, shake256_xof_ctx *ctx, uint64_t *v, uint16_t weight);
-void vect_sample_fixed_weight2_param(const hqc_params_t *params, shake256_xof_ctx *ctx, uint64_t *v, uint16_t weight);
-void vect_set_random_param(const hqc_params_t *params, shake256_xof_ctx *ctx, uint64_t *v);
-void vect_truncate_param(const hqc_params_t *params, uint64_t *v);
-void vect_print_param(const hqc_params_t *params, const uint64_t *v, const uint32_t size);
 
 void vect_generate_random_support1(shake256_xof_ctx *ctx, uint32_t *support, uint16_t weight);
 void vect_generate_random_support2(shake256_xof_ctx *ctx, uint32_t *support, uint16_t weight);

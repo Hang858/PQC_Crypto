@@ -12,6 +12,7 @@
  */
 
 #include "gf2x.h"
+#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include "parameters.h"
@@ -24,7 +25,7 @@
 /** @def TMP_BUFFER_WORDS
  *  @brief Total size in 64-bit words for the temporary buffer used by recursive Karatsuba.
  */
-#define TMP_BUFFER_WORDS (16 * VEC_N_SIZE_64)
+#define TMP_BUFFER_WORDS (16 * (size_t)VEC_N_SIZE_64)
 
 /**
  * @brief Schoolbook multiplication over GF(2).
@@ -149,12 +150,20 @@ static void reduce(uint64_t *o, const uint64_t *a) {
  * @param[in]  a2  Operand polynomial b(x).
  */
 void vect_mul(uint64_t *o, const uint64_t *a1, const uint64_t *a2) {
-    uint64_t unreduced[2 * VEC_N_SIZE_64];
-    uint64_t tmp_buffer[TMP_BUFFER_WORDS];
+    uint64_t *unreduced = calloc(2 * (size_t)VEC_N_SIZE_64, sizeof(uint64_t));
+    uint64_t *tmp_buffer = calloc(TMP_BUFFER_WORDS, sizeof(uint64_t));
+    if (unreduced == NULL || tmp_buffer == NULL) {
+        free(unreduced);
+        free(tmp_buffer);
+        memset(o, 0, VEC_N_SIZE_64 * sizeof(uint64_t));
+        return;
+    }
 
     /* multiply via Karatsuba into unreduced */
     karatsuba_mul(unreduced, a1, a2, VEC_N_SIZE_64, tmp_buffer);
 
     /* reduce modulo X^n - 1 */
     reduce(o, unreduced);
+    free(unreduced);
+    free(tmp_buffer);
 }

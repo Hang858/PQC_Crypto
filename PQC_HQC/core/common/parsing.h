@@ -8,15 +8,8 @@
 
 //#include <immintrin.h>
 #include <stdint.h>
-#include "hqc_params.h"
 #include "data_structures.h"
 #include "parameters.h"
-#include "level_namespace.h"
-
-void hqc_dk_pke_from_string_param(const hqc_params_t *params, uint64_t *y, const uint8_t *dk_pke);
-void hqc_ek_pke_from_string_param(const hqc_params_t *params, uint64_t *h, uint64_t *s, const uint8_t *ek_pke);
-void hqc_c_kem_to_string_param(const hqc_params_t *params, uint8_t *ct, const ciphertext_kem_t *c_kem);
-void hqc_c_kem_from_string_param(const hqc_params_t *params, ciphertext_pke_t *c_pke, uint8_t *salt, const uint8_t *ct);
 
 void hqc_dk_pke_from_string(uint64_t *y, const uint8_t *dk_pke);
 void hqc_ek_pke_from_string(uint64_t *h, uint64_t *s, const uint8_t *ek_pke);

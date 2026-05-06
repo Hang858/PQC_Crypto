@@ -4,14 +4,15 @@
 * Abstract: matrix arithmetic functions used by the KEM
 *********************************************************************************************/
 
-#include "frodo_macrify.h"
+#include <stdlib.h>
 #include <string.h>
+#include "frodo_macrify.h"
 
 #if defined(USE_AES128_FOR_A)
 #if !defined(USE_OPENSSL)
-    #include "aes.h"
+    #include "../../common/aes/aes.h"
 #else
-    #include "aes_openssl.h"
+    #include "../../common/aes/aes_openssl.h"
 #endif
 #elif defined (USE_SHAKE128_FOR_A)
     #include "fips202.h"
@@ -23,7 +24,10 @@ int frodo_mul_add_as_plus_e(uint16_t *out, const uint16_t *s, const uint16_t *e,
   // Inputs: s, e (N x N_BAR)
   // Output: out = A*s + e (N x N_BAR)
     int i, j, k;
-    int16_t A[PARAMS_N * PARAMS_N] = {0};       
+    int16_t *A = calloc((size_t)PARAMS_N * PARAMS_N, sizeof(int16_t));
+    if (A == NULL) {
+        return 0;
+    }
        
 #if defined(USE_AES128_FOR_A)    // Matrix A generation using AES128, done per 128-bit block                                          
     size_t A_len = PARAMS_N * PARAMS_N * sizeof(int16_t);    
@@ -72,6 +76,7 @@ int frodo_mul_add_as_plus_e(uint16_t *out, const uint16_t *s, const uint16_t *e,
 #if defined(USE_AES128_FOR_A)
     AES128_free_schedule(aes_key_schedule);
 #endif
+    free(A);
     return 1;
 }
 
@@ -81,7 +86,10 @@ int frodo_mul_add_sa_plus_e(uint16_t *out, const uint16_t *s, uint16_t *e, const
   // Inputs: s', e' (N_BAR x N)
   // Output: out = s'*A + e' (N_BAR x N)
     int i, j, k;
-    int16_t A[PARAMS_N * PARAMS_N] = {0};        
+    int16_t *A = calloc((size_t)PARAMS_N * PARAMS_N, sizeof(int16_t));
+    if (A == NULL) {
+        return 0;
+    }
     
 #if defined(USE_AES128_FOR_A)    // Matrix A generation using AES128, done per 128-bit block                                       
     size_t A_len = PARAMS_N * PARAMS_N * sizeof(int16_t);      
@@ -130,6 +138,7 @@ int frodo_mul_add_sa_plus_e(uint16_t *out, const uint16_t *s, uint16_t *e, const
 #if defined(USE_AES128_FOR_A)
     AES128_free_schedule(aes_key_schedule);
 #endif
+    free(A);
     return 1;
 }
 

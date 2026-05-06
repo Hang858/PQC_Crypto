@@ -17,10 +17,12 @@ static int run_level(scloudplus_level_t level) {
         goto out;
     }
 
-    if (SCLOUDPLUS_crypto_kem_keypair(level, pk, sk) != 0) ok = 0;
-    if (ok && SCLOUDPLUS_crypto_kem_enc(level, ct, ss1, pk) != 0) ok = 0;
-    if (ok && SCLOUDPLUS_crypto_kem_dec(level, ss2, ct, sk) != 0) ok = 0;
-    if (ok && memcmp(ss1, ss2, params->bytes) != 0) ok = 0;
+    for (int count = 0; count < 10 && ok; count++) {
+        if (SCLOUDPLUS_crypto_kem_keypair(level, pk, sk) != 0) ok = 0;
+        if (ok && SCLOUDPLUS_crypto_kem_enc(level, ct, ss1, pk) != 0) ok = 0;
+        if (ok && SCLOUDPLUS_crypto_kem_dec(level, ss2, ct, sk) != 0) ok = 0;
+        if (ok && memcmp(ss1, ss2, params->bytes) != 0) ok = 0;
+    }
 
 out:
     free(pk);

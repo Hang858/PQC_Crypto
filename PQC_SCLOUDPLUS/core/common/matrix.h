@@ -1,7 +1,6 @@
 #ifndef _SCLOUDPLUS_MATRIX_H_
 #define _SCLOUDPLUS_MATRIX_H_
 #include <stdint.h>
-#include "level_namespace.h"
 
 void scloudplus_add(uint16_t *in0, uint16_t *in1, int len, uint16_t *out);
 

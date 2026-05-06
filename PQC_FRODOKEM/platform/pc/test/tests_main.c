@@ -1,39 +1,48 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "api.h"
 
-static int run_one(frodokem_level_t level)
-{
+static int run_one(frodokem_level_t level) {
     const frodokem_params_t *params = FRODOKEM_get_params(level);
-    unsigned char pk[43088];
-    unsigned char sk[43088];
-    unsigned char ct[21632];
-    unsigned char ss1[32];
-    unsigned char ss2[32];
+    unsigned char *pk = NULL;
+    unsigned char *sk = NULL;
+    unsigned char *ct = NULL;
+    unsigned char ss1[FRODOKEM_MAX_SHARED_SECRET_BYTES] = {0};
+    unsigned char ss2[FRODOKEM_MAX_SHARED_SECRET_BYTES] = {0};
+    int ret = 1;
 
     if (params == NULL) {
         return 1;
     }
 
-    memset(pk, 0, sizeof(pk));
-    memset(sk, 0, sizeof(sk));
-    memset(ct, 0, sizeof(ct));
-    memset(ss1, 0, sizeof(ss1));
-    memset(ss2, 0, sizeof(ss2));
+    pk = calloc(params->publickeybytes, 1);
+    sk = calloc(params->secretkeybytes, 1);
+    ct = calloc(params->ciphertextbytes, 1);
+    if (pk == NULL || sk == NULL || ct == NULL) {
+        goto cleanup;
+    }
 
-    printf("Testing %s\n", params->name);
-    if (FRODOKEM_crypto_kem_keypair_enc(level, ct, ss1, pk, sk) != 0) {
-        return 1;
+    printf("Testing %s\n", params->algname);
+    if (FRODOKEM_crypto_kem_keypair(level, pk, sk) != 0) {
+        goto cleanup;
+    }
+    if (FRODOKEM_crypto_kem_enc(level, ct, ss1, pk) != 0) {
+        goto cleanup;
     }
     if (FRODOKEM_crypto_kem_dec(level, ss2, ct, sk) != 0) {
-        return 1;
+        goto cleanup;
     }
+    ret = memcmp(ss1, ss2, params->bytes) != 0;
 
-    return memcmp(ss1, ss2, params->shared_secret_bytes) != 0;
+cleanup:
+    free(pk);
+    free(sk);
+    free(ct);
+    return ret;
 }
 
-int main(void)
-{
+int main(void) {
     if (run_one(FRODOKEM_640) != 0) {
         return 1;
     }
@@ -44,6 +53,6 @@ int main(void)
         return 1;
     }
 
-    printf("All eFrodoKEM tests passed.\n");
+    printf("All FrodoKEM ref tests passed.\n");
     return 0;
 }

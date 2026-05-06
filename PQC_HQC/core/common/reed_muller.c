@@ -126,7 +126,7 @@ static void expand_and_sum(rm_expanded_cdw *dest, rm_codeword_t src[]) {
         }
     }
     // sum the rest of the copies
-    for (int32_t copy = 1; copy < MULTIPLICITY; copy++) {
+    for (uint32_t copy = 1; copy < MULTIPLICITY; copy++) {
         for (int32_t part = 0; part < 4; part++) {
             for (int32_t bit = 0; bit < 32; bit++) {
                 (*dest)[part * 32 + bit] += src[copy].u32[part] >> bit & 1;

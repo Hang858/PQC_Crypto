@@ -129,13 +129,13 @@ static void radix(uint16_t *f0, uint16_t *f1, const uint16_t *f, uint32_t m_f) {
  * @param[in]  m_f Log₂ of the input size
  */
 static void radix_big(uint16_t *f0, uint16_t *f1, const uint16_t *f, uint32_t m_f) {
-    uint16_t Q[2 * (1 << (PARAM_FFT - 2)) + 1] = {0};
-    uint16_t R[2 * (1 << (PARAM_FFT - 2)) + 1] = {0};
+    uint16_t Q[2 * (1 << (HQC_MAX_FFT - 2)) + 1] = {0};
+    uint16_t R[2 * (1 << (HQC_MAX_FFT - 2)) + 1] = {0};
 
-    uint16_t Q0[1 << (PARAM_FFT - 2)] = {0};
-    uint16_t Q1[1 << (PARAM_FFT - 2)] = {0};
-    uint16_t R0[1 << (PARAM_FFT - 2)] = {0};
-    uint16_t R1[1 << (PARAM_FFT - 2)] = {0};
+    uint16_t Q0[1 << (HQC_MAX_FFT - 2)] = {0};
+    uint16_t Q1[1 << (HQC_MAX_FFT - 2)] = {0};
+    uint16_t R0[1 << (HQC_MAX_FFT - 2)] = {0};
+    uint16_t R1[1 << (HQC_MAX_FFT - 2)] = {0};
 
     size_t i, n;
 
@@ -172,14 +172,14 @@ static void radix_big(uint16_t *f0, uint16_t *f1, const uint16_t *f, uint32_t m_
  * @param[in] betas FFT constants
  */
 static void fft_rec(uint16_t *w, uint16_t *f, size_t f_coeffs, uint8_t m, uint32_t m_f, const uint16_t *betas) {
-    uint16_t f0[1 << (PARAM_FFT - 2)] = {0};
-    uint16_t f1[1 << (PARAM_FFT - 2)] = {0};
+    uint16_t f0[1 << (HQC_MAX_FFT - 2)] = {0};
+    uint16_t f1[1 << (HQC_MAX_FFT - 2)] = {0};
     uint16_t gammas[PARAM_M - 2] = {0};
     uint16_t deltas[PARAM_M - 2] = {0};
     uint16_t gammas_sums[1 << (PARAM_M - 2)] = {0};
     uint16_t u[1 << (PARAM_M - 2)] = {0};
     uint16_t v[1 << (PARAM_M - 2)] = {0};
-    uint16_t tmp[PARAM_M - (PARAM_FFT - 1)] = {0};
+    uint16_t tmp[PARAM_M] = {0};
 
     uint16_t beta_m_pow;
     size_t i, j, k;
@@ -274,8 +274,8 @@ static void fft_rec(uint16_t *w, uint16_t *f, size_t f_coeffs, uint8_t m, uint32
 void fft(uint16_t *w, const uint16_t *f, size_t f_coeffs) {
     uint16_t betas[PARAM_M - 1] = {0};
     uint16_t betas_sums[1 << (PARAM_M - 1)] = {0};
-    uint16_t f0[1 << (PARAM_FFT - 1)] = {0};
-    uint16_t f1[1 << (PARAM_FFT - 1)] = {0};
+    uint16_t f0[1 << (HQC_MAX_FFT - 1)] = {0};
+    uint16_t f1[1 << (HQC_MAX_FFT - 1)] = {0};
     uint16_t deltas[PARAM_M - 1] = {0};
     uint16_t u[1 << (PARAM_M - 1)] = {0};
     uint16_t v[1 << (PARAM_M - 1)] = {0};
