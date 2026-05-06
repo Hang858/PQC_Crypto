@@ -1,0 +1,15 @@
+# 排除目标文件和静态库
+*.o
+*.a
+*.so
+*.out
+
+# 排除特定的可执行二进制文件（根据你的输出）
+test_frodokem_ref
+test_hqc_ref
+test_scloudplus_ref
+
+# 排除 IDE 或系统临时文件
+.DS_Store
+.vscode/
+build/
