@@ -70,6 +70,7 @@ typedef shake256incctx shake256_xof_ctx;
 
 void prng_init(uint8_t *entropy_input, uint8_t *personalization_string, uint32_t enlen, uint32_t perlen);
 void prng_get_bytes(uint8_t *output, uint32_t outlen);
+int hqc_randombytes(uint8_t *output, uint32_t outlen);
 
 void xof_init(shake256_xof_ctx *xof_ctx, const uint8_t *seed, uint32_t seed_size);
 void xof_get_bytes(shake256_xof_ctx *xof_ctx, uint8_t *output, uint32_t output_size);

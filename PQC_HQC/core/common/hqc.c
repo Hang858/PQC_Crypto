@@ -13,9 +13,7 @@
 #include "parameters.h"
 #include "symmetric.h"
 #include "vector.h"
-#ifdef VERBOSE
-#include <stdio.h>
-#endif
+#include "hqc_log.h"
 
 /**
  * @brief Generates a key pair for the HQC public-key encryption (PKE) scheme.
@@ -65,17 +63,17 @@ void hqc_pke_keygen(uint8_t *ek_pke, uint8_t *dk_pke, uint8_t *seed) {
     memcpy(dk_pke, seed_dk, SEED_BYTES);
 
 #ifdef VERBOSE
-    printf("\n\nseed_dk: ");
-    for (int i = 0; i < SEED_BYTES; ++i) printf("%02x", seed_dk[i]);
-    printf("\n\nseed_ek: ");
-    for (int i = 0; i < SEED_BYTES; ++i) printf("%02x", seed_ek[i]);
-    printf("\n\ny: ");
+    HQC_LOGF("\n\nseed_dk: ");
+    for (int i = 0; i < SEED_BYTES; ++i) HQC_LOGF("%02x", seed_dk[i]);
+    HQC_LOGF("\n\nseed_ek: ");
+    for (int i = 0; i < SEED_BYTES; ++i) HQC_LOGF("%02x", seed_ek[i]);
+    HQC_LOGF("\n\ny: ");
     vect_print(y, VEC_N_SIZE_BYTES);
-    printf("\n\nx: ");
+    HQC_LOGF("\n\nx: ");
     vect_print(x, VEC_N_SIZE_BYTES);
-    printf("\n\nh: ");
+    HQC_LOGF("\n\nh: ");
     vect_print(h, VEC_N_SIZE_BYTES);
-    printf("\n\ns: ");
+    HQC_LOGF("\n\ns: ");
     vect_print(s, VEC_N_SIZE_BYTES);
 #endif
 
@@ -144,21 +142,21 @@ void hqc_pke_encrypt(ciphertext_pke_t *c_pke, const uint8_t *ek_pke, const uint6
     vect_add(c_pke->v, c_pke->v, tmp, VEC_N1N2_SIZE_64);
 
 #ifdef VERBOSE
-    printf("\n\nh: ");
+    HQC_LOGF("\n\nh: ");
     vect_print(h, VEC_N_SIZE_BYTES);
-    printf("\n\ns: ");
+    HQC_LOGF("\n\ns: ");
     vect_print(s, VEC_N_SIZE_BYTES);
-    printf("\n\nr1: ");
+    HQC_LOGF("\n\nr1: ");
     vect_print(r1, VEC_N_SIZE_BYTES);
-    printf("\n\nr2: ");
+    HQC_LOGF("\n\nr2: ");
     vect_print(r2, VEC_N_SIZE_BYTES);
-    printf("\n\ne: ");
+    HQC_LOGF("\n\ne: ");
     vect_print(e, VEC_N_SIZE_BYTES);
-    printf("\n\nTruncate(s.r2 + e): ");
+    HQC_LOGF("\n\nTruncate(s.r2 + e): ");
     vect_print(tmp, VEC_N1N2_SIZE_BYTES);
-    printf("\n\nc_pke->u: ");
+    HQC_LOGF("\n\nc_pke->u: ");
     vect_print(c_pke->u, VEC_N_SIZE_BYTES);
-    printf("\n\nc_pke->v: ");
+    HQC_LOGF("\n\nc_pke->v: ");
     vect_print(c_pke->v, VEC_N1N2_SIZE_BYTES);
 #endif
     // Zeroize sensitive data
@@ -219,15 +217,15 @@ uint8_t hqc_pke_decrypt(uint64_t *m, const uint8_t *dk_pke, const ciphertext_pke
     vect_add(tmp2, c_pke->v, tmp1, VEC_N1N2_SIZE_64);
 
 #ifdef VERBOSE
-    printf("\n\nc_pke.u: ");
+    HQC_LOGF("\n\nc_pke.u: ");
     vect_print(c_pke->u, VEC_N_SIZE_BYTES);
-    printf("\n\nc_pke.v: ");
+    HQC_LOGF("\n\nc_pke.v: ");
     vect_print(c_pke->v, VEC_N1N2_SIZE_BYTES);
-    printf("\n\ny: ");
+    HQC_LOGF("\n\ny: ");
     vect_print(y, VEC_N_SIZE_BYTES);
-    printf("\n\nTruncate(u.y): ");
+    HQC_LOGF("\n\nTruncate(u.y): ");
     vect_print(tmp1, VEC_N1N2_SIZE_BYTES);
-    printf("\n\nv - Truncate(u.y): ");
+    HQC_LOGF("\n\nv - Truncate(u.y): ");
     vect_print(tmp2, VEC_N1N2_SIZE_BYTES);
 #endif
 

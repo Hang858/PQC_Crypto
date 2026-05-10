@@ -33,5 +33,6 @@ int OP_hash_init(uint8_t alg, void *s, int s_len);
 int OP_hash_absorb(uint8_t alg, void *s, int s_len, const void *input, int input_len);
 int OP_hash_squeeze(uint8_t alg, void *s, int s_len, void *output, int output_len);
 int OP_trng(void *buffer, int size);
+int OP_matrix_mul_8x8(uint16_t z_out[8][8], const uint16_t x_in[8][8], const uint16_t y_in[8][8], uint16_t q);
 
 #endif

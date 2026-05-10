@@ -110,25 +110,37 @@ void frodokem_shake(uint8_t *output, size_t outlen, const uint8_t *input, size_t
     g_frodokem_params->shake(output, outlen, input, inlen);
 }
 
-int FRODOKEM_crypto_kem_keypair(frodokem_level_t level, uint8_t *pk, uint8_t *sk) {
+int crypto_kem_keypair(frodokem_level_t level, uint8_t *pk, uint8_t *sk) {
     if (FRODOKEM_select_level(level) != 0) {
         return -1;
     }
-    return crypto_kem_keypair(pk, sk);
+    return crypto_kem_keypair_impl(pk, sk);
+}
+
+int crypto_kem_enc(frodokem_level_t level, uint8_t *ct, uint8_t *ss, const uint8_t *pk) {
+    if (FRODOKEM_select_level(level) != 0) {
+        return -1;
+    }
+    return crypto_kem_enc_impl(ct, ss, pk);
+}
+
+int crypto_kem_dec(frodokem_level_t level, uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
+    if (FRODOKEM_select_level(level) != 0) {
+        return -1;
+    }
+    return crypto_kem_dec_impl(ss, ct, sk);
+}
+
+int FRODOKEM_crypto_kem_keypair(frodokem_level_t level, uint8_t *pk, uint8_t *sk) {
+    return crypto_kem_keypair(level, pk, sk);
 }
 
 int FRODOKEM_crypto_kem_enc(frodokem_level_t level, uint8_t *ct, uint8_t *ss, const uint8_t *pk) {
-    if (FRODOKEM_select_level(level) != 0) {
-        return -1;
-    }
-    return crypto_kem_enc(ct, ss, pk);
+    return crypto_kem_enc(level, ct, ss, pk);
 }
 
 int FRODOKEM_crypto_kem_dec(frodokem_level_t level, uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
-    if (FRODOKEM_select_level(level) != 0) {
-        return -1;
-    }
-    return crypto_kem_dec(ss, ct, sk);
+    return crypto_kem_dec(level, ss, ct, sk);
 }
 
 int FRODOKEM_crypto_kem_keypair_enc(frodokem_level_t level, uint8_t *ct, uint8_t *ss, uint8_t *pk, uint8_t *sk) {

@@ -15,7 +15,7 @@ BASE_CFLAGS = -O3 -Wall -Wextra -Wpedantic -std=c99 \
 RUNTIME_CFLAGS = $(BASE_CFLAGS)
 
 COMMON_SRCS = code hqc kem parsing symmetric vector fft gf gf2x reed_muller reed_solomon hqc_params
-PLATFORM_SRCS = crypto_memset fips202 endian op_hash sha256 sm3
+PLATFORM_SRCS = crypto_memset fips202 endian op_hash op_matrix op_trng sha256 sm3
 
 LIB = libpqc_hqc.a
 TEST_EXE = test_hqc_ref
@@ -40,6 +40,12 @@ endian.o:
 
 op_hash.o:
 	$(CC) $(BASE_CFLAGS) -c soft/op_hash.c -o $@
+
+op_matrix.o:
+	$(CC) $(BASE_CFLAGS) -c soft/op_matrix.c -o $@
+
+op_trng.o:
+	$(CC) $(BASE_CFLAGS) -c soft/op_trng.c -o $@
 
 sha256.o:
 	$(CC) $(BASE_CFLAGS) -c soft/sha256.c -o $@
@@ -70,7 +76,7 @@ clean:
 	rm -f *.o *.a $(TEST_EXE) $(KAT_EXE) kat_runtime.o
 
 kat_runtime.o: $(TEST_PATH)/kat_runtime.c
-	$(CC) $(BASE_CFLAGS) -c $(TEST_PATH)/kat_runtime.c -o $@
+	$(CC) $(BASE_CFLAGS) -DHQC_USE_DETERMINISTIC_PRNG -c $(TEST_PATH)/kat_runtime.c -o $@
 
 $(KAT_EXE): $(LIB) kat_runtime.o
 	$(CC) $(BASE_CFLAGS) -o $@ kat_runtime.o -Wl,--whole-archive $(LIB) -Wl,--no-whole-archive

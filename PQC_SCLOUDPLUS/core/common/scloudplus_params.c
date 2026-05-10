@@ -149,35 +149,47 @@ int SCLOUDPLUS_select_level(scloudplus_level_t level) {
     return 0;
 }
 
-int crypto_kem_keypair(uint8_t *pk, uint8_t *sk) {
+static int crypto_kem_keypair_impl(uint8_t *pk, uint8_t *sk) {
     return scloud_kemkeygen(pk, sk);
 }
 
-int crypto_kem_enc(uint8_t *ct, uint8_t *ss, const uint8_t *pk) {
+static int crypto_kem_enc_impl(uint8_t *ct, uint8_t *ss, const uint8_t *pk) {
     return scloud_kemencaps((uint8_t *)pk, ct, ss);
 }
 
-int crypto_kem_dec(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
+static int crypto_kem_dec_impl(uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
     return scloud_kemdecaps((uint8_t *)sk, (uint8_t *)ct, ss);
 }
 
-int SCLOUDPLUS_crypto_kem_keypair(scloudplus_level_t level, uint8_t *pk, uint8_t *sk) {
+int crypto_kem_keypair(scloudplus_level_t level, uint8_t *pk, uint8_t *sk) {
     if (SCLOUDPLUS_select_level(level) != 0) {
         return -1;
     }
-    return crypto_kem_keypair(pk, sk);
+    return crypto_kem_keypair_impl(pk, sk);
+}
+
+int crypto_kem_enc(scloudplus_level_t level, uint8_t *ct, uint8_t *ss, const uint8_t *pk) {
+    if (SCLOUDPLUS_select_level(level) != 0) {
+        return -1;
+    }
+    return crypto_kem_enc_impl(ct, ss, pk);
+}
+
+int crypto_kem_dec(scloudplus_level_t level, uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
+    if (SCLOUDPLUS_select_level(level) != 0) {
+        return -1;
+    }
+    return crypto_kem_dec_impl(ss, ct, sk);
+}
+
+int SCLOUDPLUS_crypto_kem_keypair(scloudplus_level_t level, uint8_t *pk, uint8_t *sk) {
+    return crypto_kem_keypair(level, pk, sk);
 }
 
 int SCLOUDPLUS_crypto_kem_enc(scloudplus_level_t level, uint8_t *ct, uint8_t *ss, const uint8_t *pk) {
-    if (SCLOUDPLUS_select_level(level) != 0) {
-        return -1;
-    }
-    return crypto_kem_enc(ct, ss, pk);
+    return crypto_kem_enc(level, ct, ss, pk);
 }
 
 int SCLOUDPLUS_crypto_kem_dec(scloudplus_level_t level, uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
-    if (SCLOUDPLUS_select_level(level) != 0) {
-        return -1;
-    }
-    return crypto_kem_dec(ss, ct, sk);
+    return crypto_kem_dec(level, ss, ct, sk);
 }

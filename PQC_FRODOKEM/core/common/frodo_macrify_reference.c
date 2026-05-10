@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "frodo_macrify.h"
+#include "operator_interface.h"
 
 #if defined(USE_AES128_FOR_A)
 #if !defined(USE_OPENSSL)
@@ -147,16 +148,31 @@ void frodo_mul_bs(uint16_t *out, const uint16_t *b, const uint16_t *s)
 { // Multiply by s on the right
   // Inputs: b (N_BAR x N), s (N x N_BAR)
   // Output: out = b*s (N_BAR x N_BAR)
-    int i, j, k;
+    int block, i, j, k;
+    uint16_t x[8][8];
+    uint16_t y[8][8];
+    uint16_t z[8][8];
+    uint16_t q = (uint16_t)PARAMS_Q;
 
-    for (i = 0; i < PARAMS_NBAR; i++) {
-        for (j = 0; j < PARAMS_NBAR; j++) {
-            out[i*PARAMS_NBAR + j] = 0;
-            for (k = 0; k < PARAMS_N; k++) {
-                out[i*PARAMS_NBAR + j] += b[i*PARAMS_N + k] * (int16_t)s[j*PARAMS_N + k];
+    memset(out, 0, PARAMS_NBAR * PARAMS_NBAR * sizeof(uint16_t));
+    for (block = 0; block < PARAMS_N; block += 8) {
+        for (i = 0; i < 8; i++) {
+            for (k = 0; k < 8; k++) {
+                x[i][k] = b[i * PARAMS_N + block + k];
+                y[k][i] = s[i * PARAMS_N + block + k];
             }
-            out[i*PARAMS_NBAR + j] = (uint32_t)(out[i*PARAMS_NBAR + j]) & ((1<<PARAMS_LOGQ)-1);
         }
+        if (OP_matrix_mul_8x8(z, (const uint16_t (*)[8])x, (const uint16_t (*)[8])y, q) != OP_SUCCESS) {
+            return;
+        }
+        for (i = 0; i < 8; i++) {
+            for (j = 0; j < 8; j++) {
+                out[i * PARAMS_NBAR + j] = (uint16_t)(out[i * PARAMS_NBAR + j] + z[i][j]);
+            }
+        }
+    }
+    for (i = 0; i < PARAMS_NBAR * PARAMS_NBAR; i++) {
+        out[i] = (uint16_t)(out[i] & ((1 << PARAMS_LOGQ) - 1));
     }
 }
 
@@ -165,16 +181,31 @@ void frodo_mul_add_sb_plus_e(uint16_t *out, const uint16_t *b, const uint16_t *s
 { // Multiply by s on the left
   // Inputs: b (N x N_BAR), s (N_BAR x N), e (N_BAR x N_BAR)
   // Output: out = s*b + e (N_BAR x N_BAR)
-    int i, j, k;
+    int block, i, j, k;
+    uint16_t x[8][8];
+    uint16_t y[8][8];
+    uint16_t z[8][8];
+    uint16_t q = (uint16_t)PARAMS_Q;
 
-    for (k = 0; k < PARAMS_NBAR; k++) {
-        for (i = 0; i < PARAMS_NBAR; i++) {
-            out[k*PARAMS_NBAR + i] = e[k*PARAMS_NBAR + i];
-            for (j = 0; j < PARAMS_N; j++) {
-                out[k*PARAMS_NBAR + i] += (int16_t)s[k*PARAMS_N + j] * b[j*PARAMS_NBAR + i];
+    memcpy(out, e, PARAMS_NBAR * PARAMS_NBAR * sizeof(uint16_t));
+    for (block = 0; block < PARAMS_N; block += 8) {
+        for (i = 0; i < 8; i++) {
+            for (k = 0; k < 8; k++) {
+                x[i][k] = s[i * PARAMS_N + block + k];
+                y[k][i] = b[(block + k) * PARAMS_NBAR + i];
             }
-            out[k*PARAMS_NBAR + i] = (uint32_t)(out[k*PARAMS_NBAR + i]) & ((1<<PARAMS_LOGQ)-1);
         }
+        if (OP_matrix_mul_8x8(z, (const uint16_t (*)[8])x, (const uint16_t (*)[8])y, q) != OP_SUCCESS) {
+            return;
+        }
+        for (i = 0; i < 8; i++) {
+            for (j = 0; j < 8; j++) {
+                out[i * PARAMS_NBAR + j] = (uint16_t)(out[i * PARAMS_NBAR + j] + z[i][j]);
+            }
+        }
+    }
+    for (i = 0; i < PARAMS_NBAR * PARAMS_NBAR; i++) {
+        out[i] = (uint16_t)(out[i] & ((1 << PARAMS_LOGQ) - 1));
     }
 }
 

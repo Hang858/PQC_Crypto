@@ -12,7 +12,7 @@ CFLAGS = -O3 -Wall -Wextra -Wpedantic -std=c99 -DUSE_HARDWARE_HASH \
 	-I$(TEST_PATH) -I. -Isoft
 
 COMMON_SRCS = encode kem matrix pke sample scloudplus_params aes_c fips202 random util
-PLATFORM_SRCS = op_hash sha256 sm3 endian
+PLATFORM_SRCS = op_hash op_matrix op_trng sha256 sm3 endian
 LIB = libpqc_scloudplus.a
 TEST_EXE = test_scloudplus_ref
 
@@ -53,6 +53,12 @@ util.o:
 
 op_hash.o:
 	$(CC) $(CFLAGS) -c soft/op_hash.c -o $@
+
+op_matrix.o:
+	$(CC) $(CFLAGS) -c soft/op_matrix.c -o $@
+
+op_trng.o:
+	$(CC) $(CFLAGS) -c soft/op_trng.c -o $@
 
 sha256.o:
 	$(CC) $(CFLAGS) -c soft/sha256.c -o $@

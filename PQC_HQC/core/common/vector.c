@@ -5,8 +5,9 @@
 
 #include "vector.h"
 #include <stdint.h>
-#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include "hqc_log.h"
 #include "parameters.h"
 
 static inline uint32_t compare_u32(const uint32_t v1, const uint32_t v2);
@@ -61,9 +62,12 @@ static inline uint32_t barrett_reduce(uint32_t x) {
  */
 void vect_generate_random_support1(shake256_xof_ctx *ctx, uint32_t *support, uint16_t weight) {
     size_t random_bytes_size = 3 * weight;
-    uint8_t rand_bytes[3 * HQC_MAX_OMEGA_R] = {0};
+    uint8_t *rand_bytes = calloc(3 * HQC_MAX_OMEGA_R, sizeof(uint8_t));
     uint8_t inc;
     size_t i, j;
+    if (rand_bytes == NULL) {
+        return;
+    }
 
     i = 0;
     j = random_bytes_size;
@@ -90,6 +94,7 @@ void vect_generate_random_support1(shake256_xof_ctx *ctx, uint32_t *support, uin
         }
         i += inc;
     }
+    free(rand_bytes);
 }
 
 /**
@@ -102,9 +107,12 @@ void vect_generate_random_support1(shake256_xof_ctx *ctx, uint32_t *support, uin
  * @param[in]     weight  Number of elements to generate (Hamming weight).
  */
 void vect_generate_random_support2(shake256_xof_ctx *ctx, uint32_t *support, uint16_t weight) {
-    uint32_t rand_u32[HQC_MAX_OMEGA_R] = {0};
+    uint32_t *rand_u32 = calloc(HQC_MAX_OMEGA_R, sizeof(uint32_t));
+    if (rand_u32 == NULL) {
+        return;
+    }
 
-    xof_get_bytes(ctx, (uint8_t *)&rand_u32, 4 * weight);
+    xof_get_bytes(ctx, (uint8_t *)rand_u32, 4 * weight);
 
     for (size_t i = 0; i < weight; ++i) {
         uint64_t buff = rand_u32[i];
@@ -121,6 +129,7 @@ void vect_generate_random_support2(shake256_xof_ctx *ctx, uint32_t *support, uin
         uint32_t mask = -found;
         support[i] = (mask & i) ^ (~mask & support[i]);
     }
+    free(rand_u32);
 }
 
 /**
@@ -134,8 +143,13 @@ void vect_generate_random_support2(shake256_xof_ctx *ctx, uint32_t *support, uin
  * @param[in]  weight  Number of positions to set.
  */
 void vect_write_support_to_vector(uint64_t *v, uint32_t *support, uint16_t weight) {
-    uint32_t index_tab[HQC_MAX_OMEGA_R] = {0};
-    uint64_t bit_tab[HQC_MAX_OMEGA_R] = {0};
+    uint32_t *index_tab = calloc(HQC_MAX_OMEGA_R, sizeof(uint32_t));
+    uint64_t *bit_tab = calloc(HQC_MAX_OMEGA_R, sizeof(uint64_t));
+    if (index_tab == NULL || bit_tab == NULL) {
+        free(index_tab);
+        free(bit_tab);
+        return;
+    }
 
     for (size_t i = 0; i < weight; i++) {
         index_tab[i] = support[i] >> 6;
@@ -154,6 +168,8 @@ void vect_write_support_to_vector(uint64_t *v, uint32_t *support, uint16_t weigh
         }
         v[i] |= val;
     }
+    free(index_tab);
+    free(bit_tab);
 }
 
 /**
@@ -172,9 +188,13 @@ void vect_write_support_to_vector(uint64_t *v, uint32_t *support, uint16_t weigh
  * @param[in]     weight  Desired Hamming weight.
  */
 void vect_sample_fixed_weight1(shake256_xof_ctx *ctx, uint64_t *v, uint16_t weight) {
-    uint32_t support[HQC_MAX_OMEGA_R] = {0};
+    uint32_t *support = calloc(HQC_MAX_OMEGA_R, sizeof(uint32_t));
+    if (support == NULL) {
+        return;
+    }
     vect_generate_random_support1(ctx, support, weight);
     vect_write_support_to_vector(v, support, weight);
+    free(support);
 }
 
 /**
@@ -191,9 +211,13 @@ void vect_sample_fixed_weight1(shake256_xof_ctx *ctx, uint64_t *v, uint16_t weig
  * @param[in]     weight  Desired Hamming weight.
  */
 void vect_sample_fixed_weight2(shake256_xof_ctx *ctx, uint64_t *v, uint16_t weight) {
-    uint32_t support[HQC_MAX_OMEGA_R] = {0};
+    uint32_t *support = calloc(HQC_MAX_OMEGA_R, sizeof(uint32_t));
+    if (support == NULL) {
+        return;
+    }
     vect_generate_random_support2(ctx, support, weight);
     vect_write_support_to_vector(v, support, weight);
+    free(support);
 }
 
 /**
@@ -277,28 +301,36 @@ void vect_truncate(uint64_t *v) {
  */
 void vect_print(const uint64_t *v, const uint32_t size) {
     if (size == VEC_K_SIZE_BYTES) {
-        uint8_t tmp[HQC_MAX_K] = {0};
+        uint8_t *tmp = calloc(HQC_MAX_K, sizeof(uint8_t));
+        if (tmp == NULL) return;
         memcpy(tmp, v, VEC_K_SIZE_BYTES);
         for (uint32_t i = 0; i < VEC_K_SIZE_BYTES; ++i) {
-            printf("%02x", tmp[i]);
+            HQC_LOGF("%02x", tmp[i]);
         }
+        free(tmp);
     } else if (size == VEC_N_SIZE_BYTES) {
-        uint8_t tmp[HQC_MAX_VEC_N_SIZE_BYTES] = {0};
+        uint8_t *tmp = calloc(HQC_MAX_VEC_N_SIZE_BYTES, sizeof(uint8_t));
+        if (tmp == NULL) return;
         memcpy(tmp, v, VEC_N_SIZE_BYTES);
         for (uint32_t i = 0; i < VEC_N_SIZE_BYTES; ++i) {
-            printf("%02x", tmp[i]);
+            HQC_LOGF("%02x", tmp[i]);
         }
+        free(tmp);
     } else if (size == VEC_N1N2_SIZE_BYTES) {
-        uint8_t tmp[HQC_MAX_VEC_N1N2_SIZE_BYTES] = {0};
+        uint8_t *tmp = calloc(HQC_MAX_VEC_N1N2_SIZE_BYTES, sizeof(uint8_t));
+        if (tmp == NULL) return;
         memcpy(tmp, v, VEC_N1N2_SIZE_BYTES);
         for (uint32_t i = 0; i < VEC_N1N2_SIZE_BYTES; ++i) {
-            printf("%02x", tmp[i]);
+            HQC_LOGF("%02x", tmp[i]);
         }
+        free(tmp);
     } else if (size == VEC_N1_SIZE_BYTES) {
-        uint8_t tmp[HQC_MAX_N1] = {0};
+        uint8_t *tmp = calloc(HQC_MAX_N1, sizeof(uint8_t));
+        if (tmp == NULL) return;
         memcpy(tmp, v, VEC_N1_SIZE_BYTES);
         for (uint32_t i = 0; i < VEC_N1_SIZE_BYTES; ++i) {
-            printf("%02x", tmp[i]);
+            HQC_LOGF("%02x", tmp[i]);
         }
+        free(tmp);
     }
 }

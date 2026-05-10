@@ -5,15 +5,15 @@
 
 #include "reed_solomon.h"
 #include <stdint.h>
-#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "crypto_memset.h"
 #include "fft.h"
 #include "gf.h"
+#include "hqc_log.h"
 #include "parameters.h"
 #ifdef VERBOSE
 #include <stdbool.h>
-#include <stdio.h>
 #endif
 
 static uint16_t mod(uint16_t i, uint16_t modulus);
@@ -64,11 +64,11 @@ void compute_generator_poly(uint16_t *poly) {
         poly[++tmp_degree] = 1;
     }
 
-    printf("\n");
+    HQC_LOGF("\n");
     for (int i = 0; i < (PARAM_G); ++i) {
-        printf("%d, ", poly[i]);
+        HQC_LOGF("%d, ", poly[i]);
     }
-    printf("\n");
+    HQC_LOGF("\n");
 }
 
 /**
@@ -85,11 +85,17 @@ void reed_solomon_encode(uint64_t *cdw, const uint64_t *msg) {
     size_t i, j, k;
     uint8_t gate_value = 0;
 
-    uint16_t tmp[HQC_MAX_G] = {0};
+    uint16_t *tmp = calloc(HQC_MAX_G, sizeof(uint16_t));
     const uint16_t *rs_poly = g_hqc_params->rs_poly;
 
-    uint8_t msg_bytes[HQC_MAX_K] = {0};
-    uint8_t cdw_bytes[HQC_MAX_N1] = {0};
+    uint8_t *msg_bytes = calloc(HQC_MAX_K, sizeof(uint8_t));
+    uint8_t *cdw_bytes = calloc(HQC_MAX_N1, sizeof(uint8_t));
+    if (tmp == NULL || msg_bytes == NULL || cdw_bytes == NULL) {
+        free(tmp);
+        free(msg_bytes);
+        free(cdw_bytes);
+        return;
+    }
 
     memcpy(msg_bytes, msg, PARAM_K);
 
@@ -109,6 +115,9 @@ void reed_solomon_encode(uint64_t *cdw, const uint64_t *msg) {
 
     memcpy(cdw_bytes + PARAM_N1 - PARAM_K, msg_bytes, PARAM_K);
     memcpy(cdw, cdw_bytes, PARAM_N1);
+    free(tmp);
+    free(msg_bytes);
+    free(cdw_bytes);
 }
 
 /**
@@ -147,8 +156,8 @@ static uint16_t compute_elp(uint16_t *sigma, const uint16_t *syndromes) {
     uint16_t deg_sigma = 0;
     uint16_t deg_sigma_p = 0;
     uint16_t deg_sigma_copy = 0;
-    uint16_t sigma_copy[HQC_MAX_DELTA + 1] = {0};
-    uint16_t X_sigma_p[HQC_MAX_DELTA + 1] = {0, 1};
+    uint16_t *sigma_copy = calloc(HQC_MAX_DELTA + 1, sizeof(uint16_t));
+    uint16_t *X_sigma_p = calloc(HQC_MAX_DELTA + 1, sizeof(uint16_t));
     uint16_t pp = (uint16_t)-1;  // 2*rho
     uint16_t d_p = 1;
     uint16_t d = syndromes[0];
@@ -159,8 +168,14 @@ static uint16_t compute_elp(uint16_t *sigma, const uint16_t *syndromes) {
     uint16_t mu;
 
     uint16_t i;
+    if (sigma_copy == NULL || X_sigma_p == NULL) {
+        free(sigma_copy);
+        free(X_sigma_p);
+        return 0;
+    }
 
     sigma[0] = 1;
+    X_sigma_p[1] = 1;
     for (mu = 0; (mu < (2 * PARAM_DELTA)); ++mu) {
         // Save sigma in case we need it to update X_sigma_p
         memcpy(sigma_copy, sigma, 2 * (PARAM_DELTA));
@@ -187,7 +202,7 @@ static uint16_t compute_elp(uint16_t *sigma, const uint16_t *syndromes) {
         deg_sigma ^= mask12 & (deg_X_sigma_p ^ deg_sigma);
 
         if (mu == (2 * PARAM_DELTA - 1)) {
-            break;
+            goto done;
         }
 
         pp ^= mask12 & (mu ^ pp);
@@ -204,6 +219,9 @@ static uint16_t compute_elp(uint16_t *sigma, const uint16_t *syndromes) {
         }
     }
 
+done:
+    free(sigma_copy);
+    free(X_sigma_p);
     return deg_sigma;
 }
 
@@ -216,10 +234,14 @@ static uint16_t compute_elp(uint16_t *sigma, const uint16_t *syndromes) {
  * @param[in] sigma Array of 2^PARAM_FFT elements storing the error locator polynomial
  */
 static void compute_roots(uint8_t *error, uint16_t *sigma) {
-    uint16_t w[1 << PARAM_M] = {0};
+    uint16_t *w = calloc((size_t)1 << PARAM_M, sizeof(uint16_t));
+    if (w == NULL) {
+        return;
+    }
 
     fft(w, sigma, PARAM_DELTA + 1);
     fft_retrieve_error_poly(error, w);
+    free(w);
 }
 
 /**
@@ -265,8 +287,8 @@ static void compute_z_poly(uint16_t *z, const uint16_t *sigma, const uint16_t de
  * @param[in] error Array storing the error
  */
 static void compute_error_values(uint16_t *error_values, const uint16_t *z, const uint8_t *error) {
-    uint16_t beta_j[HQC_MAX_DELTA] = {0};
-    uint16_t e_j[HQC_MAX_DELTA] = {0};
+    uint16_t *beta_j = calloc(HQC_MAX_DELTA, sizeof(uint16_t));
+    uint16_t *e_j = calloc(HQC_MAX_DELTA, sizeof(uint16_t));
 
     uint16_t delta_counter;
     uint16_t delta_real_value;
@@ -277,6 +299,11 @@ static void compute_error_values(uint16_t *error_values, const uint16_t *z, cons
     uint16_t tmp2;
     uint16_t inverse;
     uint16_t inverse_power_j;
+    if (beta_j == NULL || e_j == NULL) {
+        free(beta_j);
+        free(e_j);
+        return;
+    }
 
     // Compute the beta_{j_i} page 31 of the documentation
     delta_counter = 0;
@@ -322,6 +349,8 @@ static void compute_error_values(uint16_t *error_values, const uint16_t *z, cons
         }
         delta_counter += found;
     }
+    free(beta_j);
+    free(e_j);
 }
 
 /**
@@ -354,13 +383,17 @@ static void correct_errors(uint8_t *cdw, const uint16_t *error_values) {
  * @param[in] cdw Array of size VEC_N1_SIZE_64 storing the received word
  */
 void reed_solomon_decode(uint64_t *msg, uint64_t *cdw) {
-    uint8_t cdw_bytes[HQC_MAX_N1] = {0};
-    uint16_t syndromes[2 * HQC_MAX_DELTA] = {0};
-    uint16_t sigma[1 << HQC_MAX_FFT] = {0};
-    uint8_t error[1 << PARAM_M] = {0};
-    uint16_t z[HQC_MAX_N1] = {0};
-    uint16_t error_values[HQC_MAX_N1] = {0};
+    uint8_t *cdw_bytes = calloc(HQC_MAX_N1, sizeof(uint8_t));
+    uint16_t *syndromes = calloc(2 * HQC_MAX_DELTA, sizeof(uint16_t));
+    uint16_t *sigma = calloc((size_t)1 << HQC_MAX_FFT, sizeof(uint16_t));
+    uint8_t *error = calloc((size_t)1 << PARAM_M, sizeof(uint8_t));
+    uint16_t *z = calloc(HQC_MAX_N1, sizeof(uint16_t));
+    uint16_t *error_values = calloc(HQC_MAX_N1, sizeof(uint16_t));
     uint16_t deg;
+    if (cdw_bytes == NULL || syndromes == NULL || sigma == NULL || error == NULL || z == NULL ||
+        error_values == NULL) {
+        goto cleanup;
+    }
 
     // Copy the vector in an array of bytes
     memcpy(cdw_bytes, cdw, PARAM_N1);
@@ -388,65 +421,74 @@ void reed_solomon_decode(uint64_t *msg, uint64_t *cdw) {
     memcpy(msg, cdw_bytes + (PARAM_G - 1), PARAM_K);
 
 #ifdef VERBOSE
-    printf("\n\nThe syndromes: ");
+    HQC_LOGF("\n\nThe syndromes: ");
     for (size_t i = 0; i < 2 * PARAM_DELTA; ++i) {
-        printf("%u ", syndromes[i]);
+        HQC_LOGF("%u ", syndromes[i]);
     }
-    printf("\n\nThe error locator polynomial: sigma(x) = ");
+    HQC_LOGF("\n\nThe error locator polynomial: sigma(x) = ");
     bool first_coeff = true;
     if (sigma[0]) {
-        printf("%u", sigma[0]);
+        HQC_LOGF("%u", sigma[0]);
         first_coeff = false;
     }
     for (size_t i = 1; i < (1 << PARAM_FFT); ++i) {
         if (sigma[i] == 0)
             continue;
         if (!first_coeff)
-            printf(" + ");
+            HQC_LOGF(" + ");
         first_coeff = false;
         if (sigma[i] != 1)
-            printf("%u ", sigma[i]);
+            HQC_LOGF("%u ", sigma[i]);
         if (i == 1)
-            printf("x");
+            HQC_LOGF("x");
         else
-            printf("x^%zu", i);
+            HQC_LOGF("x^%zu", i);
     }
     if (first_coeff)
-        printf("0");
+        HQC_LOGF("0");
 
-    printf("\n\nThe polynomial: z(x) = ");
+    HQC_LOGF("\n\nThe polynomial: z(x) = ");
     bool first_coeff_1 = true;
     if (z[0]) {
-        printf("%u", z[0]);
+        HQC_LOGF("%u", z[0]);
         first_coeff_1 = false;
     }
     for (size_t i = 1; i < (PARAM_DELTA + 1); ++i) {
         if (z[i] == 0)
             continue;
         if (!first_coeff_1)
-            printf(" + ");
+            HQC_LOGF(" + ");
         first_coeff_1 = false;
         if (z[i] != 1)
-            printf("%u ", z[i]);
+            HQC_LOGF("%u ", z[i]);
         if (i == 1)
-            printf("x");
+            HQC_LOGF("x");
         else
-            printf("x^%zu", i);
+            HQC_LOGF("x^%zu", i);
     }
     if (first_coeff_1)
-        printf("0");
+        HQC_LOGF("0");
 
-    printf("\n\nThe pairs of (error locator numbers, error values): ");
+    HQC_LOGF("\n\nThe pairs of (error locator numbers, error values): ");
     size_t j = 0;
     for (size_t i = 0; i < PARAM_N1; ++i) {
         if (error[i]) {
-            printf("(%zu, %d) ", i, error_values[j]);
+            HQC_LOGF("(%zu, %d) ", i, error_values[j]);
             j++;
         }
     }
-    printf("\n");
+    HQC_LOGF("\n");
 #endif
 
     // Zeroize sensitive data
-    memset_zero(cdw_bytes, sizeof cdw_bytes);
+cleanup:
+    if (cdw_bytes != NULL) {
+        memset_zero(cdw_bytes, HQC_MAX_N1);
+    }
+    free(cdw_bytes);
+    free(syndromes);
+    free(sigma);
+    free(error);
+    free(z);
+    free(error_values);
 }

@@ -6,6 +6,7 @@
 
 #include "symmetric.h"
 #include <stdint.h>
+#include "operator_interface.h"
 
 /**
  * @typedef shake256_prng_ctx
@@ -13,6 +14,7 @@
  *
  */
 shake256incctx shake256_prng_ctx;
+static uint8_t hqc_prng_initialized = 0;
 
 /**
  * @brief SHAKE-256 with incremental API and domain separation
@@ -31,6 +33,7 @@ void prng_init(uint8_t *entropy_input, uint8_t *personalization_string, uint32_t
     shake256_inc_absorb(&shake256_prng_ctx, personalization_string, perlen);
     shake256_inc_absorb(&shake256_prng_ctx, &domain, 1);
     shake256_inc_finalize(&shake256_prng_ctx);
+    hqc_prng_initialized = 1;
 }
 
 /**
@@ -43,6 +46,14 @@ void prng_init(uint8_t *entropy_input, uint8_t *personalization_string, uint32_t
  */
 void prng_get_bytes(uint8_t *output, uint32_t outlen) {
     shake256_inc_squeeze(output, outlen, &shake256_prng_ctx);
+}
+
+int hqc_randombytes(uint8_t *output, uint32_t outlen) {
+    if (hqc_prng_initialized != 0) {
+        prng_get_bytes(output, outlen);
+        return 0;
+    }
+    return OP_trng(output, (int)outlen);
 }
 
 /**

@@ -436,23 +436,35 @@ int HQC_select_level(hqc_level_t level) {
     return 0;
 }
 
-int HQC_crypto_kem_keypair(hqc_level_t level, uint8_t *pk, uint8_t *sk) {
+int crypto_kem_keypair(hqc_level_t level, uint8_t *pk, uint8_t *sk) {
     if (HQC_select_level(level) != 0) {
         return -1;
     }
-    return crypto_kem_keypair(pk, sk);
+    return crypto_kem_keypair_impl(pk, sk);
+}
+
+int crypto_kem_enc(hqc_level_t level, uint8_t *ct, uint8_t *ss, const uint8_t *pk) {
+    if (HQC_select_level(level) != 0) {
+        return -1;
+    }
+    return crypto_kem_enc_impl(ct, ss, pk);
+}
+
+int crypto_kem_dec(hqc_level_t level, uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
+    if (HQC_select_level(level) != 0) {
+        return -1;
+    }
+    return crypto_kem_dec_impl(ss, ct, sk);
+}
+
+int HQC_crypto_kem_keypair(hqc_level_t level, uint8_t *pk, uint8_t *sk) {
+    return crypto_kem_keypair(level, pk, sk);
 }
 
 int HQC_crypto_kem_enc(hqc_level_t level, uint8_t *ct, uint8_t *ss, const uint8_t *pk) {
-    if (HQC_select_level(level) != 0) {
-        return -1;
-    }
-    return crypto_kem_enc(ct, ss, pk);
+    return crypto_kem_enc(level, ct, ss, pk);
 }
 
 int HQC_crypto_kem_dec(hqc_level_t level, uint8_t *ss, const uint8_t *ct, const uint8_t *sk) {
-    if (HQC_select_level(level) != 0) {
-        return -1;
-    }
-    return crypto_kem_dec(ss, ct, sk);
+    return crypto_kem_dec(level, ss, ct, sk);
 }

@@ -13,13 +13,7 @@
 #define OS_WIN       1
 #define OS_NIX       2
 
-#if defined(WINDOWS)            // Microsoft Windows
-    #define OS_TARGET OS_WIN
-#elif defined(NIX)              // Unix-like operative systems
-    #define OS_TARGET OS_NIX 
-#else
-    #error -- "Unsupported OS"
-#endif
+#define OS_TARGET OS_NIX
 
 
 // Definition of compiler
@@ -28,14 +22,12 @@
 #define COMPILER_GCC     2
 #define COMPILER_CLANG   3
 
-#if defined(_MSC_VER)           // Microsoft Visual C compiler
-    #define COMPILER COMPILER_VC
-#elif defined(__GNUC__)         // GNU GCC compiler
-    #define COMPILER COMPILER_GCC   
-#elif defined(__clang__)        // Clang compiler
-    #define COMPILER COMPILER_CLANG
+#if defined(_MSC_VER)
+#define COMPILER COMPILER_VC
+#elif defined(__clang__)
+#define COMPILER COMPILER_CLANG
 #else
-    #error -- "Unsupported COMPILER"
+#define COMPILER COMPILER_GCC
 #endif
 
 
@@ -48,20 +40,18 @@
 #define TARGET_S390X        5
 #define TARGET_RISCV        6
 
-#if defined(_AMD64_)
-    #define TARGET TARGET_AMD64 
-#elif defined(_X86_)
-    #define TARGET TARGET_x86
+#if defined(_X86_)
+#define TARGET TARGET_x86
 #elif defined(_ARM_)
-    #define TARGET TARGET_ARM
+#define TARGET TARGET_ARM
 #elif defined(_PPC_)
-    #define TARGET TARGET_PPC 
+#define TARGET TARGET_PPC
 #elif defined(_S390X_)
-    #define TARGET TARGET_S390X
+#define TARGET TARGET_S390X
 #elif defined(_RISCV_)
-    #define TARGET TARGET_RISCV
+#define TARGET TARGET_RISCV
 #else
-    #error -- "Unsupported ARCHITECTURE"
+#define TARGET TARGET_AMD64
 #endif
 
 

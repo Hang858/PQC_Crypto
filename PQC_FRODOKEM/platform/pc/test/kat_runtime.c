@@ -184,7 +184,7 @@ int main(int argc, char **argv) {
         }
 
         randombytes_init(seed, NULL, 256);
-        if (crypto_kem_keypair(pk, sk) != 0) {
+        if (crypto_kem_keypair(level, pk, sk) != 0) {
             result = KAT_CRYPTO_FAILURE;
             break;
         }
@@ -209,7 +209,7 @@ int main(int argc, char **argv) {
             break;
         }
 
-        if (crypto_kem_enc(ct, ss, pk) != 0) {
+        if (crypto_kem_enc(level, ct, ss, pk) != 0) {
             result = KAT_CRYPTO_FAILURE;
             break;
         }
@@ -225,7 +225,7 @@ int main(int argc, char **argv) {
             break;
         }
 
-        if (crypto_kem_dec(ss_dec, ct, sk) != 0 || memcmp(ss, ss_dec, params->bytes) != 0) {
+        if (crypto_kem_dec(level, ss_dec, ct, sk) != 0 || memcmp(ss, ss_dec, params->bytes) != 0) {
             fprintf(stderr, "KAT decaps mismatch at count %d\n", count);
             result = KAT_CRYPTO_FAILURE;
             break;

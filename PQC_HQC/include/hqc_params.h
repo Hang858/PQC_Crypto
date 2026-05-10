@@ -77,4 +77,8 @@ int HQC_crypto_kem_keypair(hqc_level_t level, uint8_t *pk, uint8_t *sk);
 int HQC_crypto_kem_enc(hqc_level_t level, uint8_t *ct, uint8_t *ss, const uint8_t *pk);
 int HQC_crypto_kem_dec(hqc_level_t level, uint8_t *ss, const uint8_t *ct, const uint8_t *sk);
 
+int crypto_kem_keypair_impl(uint8_t *pk, uint8_t *sk);
+int crypto_kem_enc_impl(uint8_t *ct, uint8_t *ss, const uint8_t *pk);
+int crypto_kem_dec_impl(uint8_t *ss, const uint8_t *ct, const uint8_t *sk);
+
 #endif

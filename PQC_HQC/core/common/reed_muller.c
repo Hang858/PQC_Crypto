@@ -5,6 +5,7 @@
 
 #include "reed_muller.h"
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include "data_structures.h"
 #include "parameters.h"
@@ -198,16 +199,23 @@ void reed_muller_encode(uint64_t *cdw, const uint64_t *msg) {
 void reed_muller_decode(uint64_t *msg, const uint64_t *cdw) {
     uint8_t *message_array = (uint8_t *)msg;
     rm_codeword_t *codeArray = (rm_codeword_t *)cdw;
-    rm_expanded_cdw expanded;
+    rm_expanded_cdw *expanded = calloc(1, sizeof(rm_expanded_cdw));
+    rm_expanded_cdw *transform = calloc(1, sizeof(rm_expanded_cdw));
+    if (expanded == NULL || transform == NULL) {
+        free(expanded);
+        free(transform);
+        return;
+    }
     for (size_t i = 0; i < VEC_N1_SIZE_BYTES; i++) {
         // collect the codewords
-        expand_and_sum(&expanded, &codeArray[i * MULTIPLICITY]);
+        expand_and_sum(expanded, &codeArray[i * MULTIPLICITY]);
         // apply hadamard transform
-        rm_expanded_cdw transform;
-        hadamard(&expanded, &transform);
+        hadamard(expanded, transform);
         // fix the first entry to get the half Hadamard transform
-        transform[0] -= 64 * MULTIPLICITY;
+        (*transform)[0] -= 64 * MULTIPLICITY;
         // finish the decoding
-        message_array[i] = find_peaks(&transform);
+        message_array[i] = find_peaks(transform);
     }
+    free(expanded);
+    free(transform);
 }

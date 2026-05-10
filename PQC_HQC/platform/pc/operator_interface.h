@@ -179,6 +179,18 @@ int OP_hash_squeeze(uint8_t alg, void *s, int s_len, void *output, int output_le
   * 待定： 接口是否直接调用硬件TRNG模块？
   */
 int OP_trng(void *buffer, int size);
+
+/**
+ * @brief 算子2. 矩阵乘法 (8x8 规模)
+ * * Z = (X * Y) mod q
+ *
+ * @param z_out     输出：存储结果的 8x8 矩阵 (64个 16-bit 元素)。
+ * @param x_in      输入：左矩阵 8x8 (64个 16-bit 元素)。
+ * @param y_in      输入：右矩阵 8x8 (64个 16-bit 元素)。
+ * @param q         输入：模数 (16-bit) 2的幂；q=0 表示 2^16。
+ * @return          0: 成功; -1: 失败。
+ */
+int OP_matrix_mul_8x8(uint16_t z_out[8][8], const uint16_t x_in[8][8], const uint16_t y_in[8][8], uint16_t q);
  
  
 /**

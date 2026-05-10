@@ -84,8 +84,8 @@ int main(int argc, char **argv) {
         fprint_bstr(rsp, "seed = ", seed, sizeof(seed));
 
         prng_init(seed, NULL, 48, 0);
-        if (crypto_kem_keypair(pk, sk) != 0 || crypto_kem_enc(ct, ss, pk) != 0 ||
-            crypto_kem_dec(ss_dec, ct, sk) != 0 || memcmp(ss, ss_dec, params->bytes) != 0) {
+        if (crypto_kem_keypair(level, pk, sk) != 0 || crypto_kem_enc(level, ct, ss, pk) != 0 ||
+            crypto_kem_dec(level, ss_dec, ct, sk) != 0 || memcmp(ss, ss_dec, params->bytes) != 0) {
             fprintf(stderr, "crypto failure at count %d\n", count);
             fclose(rsp);
             free(pk);

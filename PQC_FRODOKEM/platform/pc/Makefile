@@ -12,7 +12,7 @@ BASE_CFLAGS = -O3 -Wall -Wextra -Wpedantic -std=c99 -DNIX -D_AMD64_ -D_REFERENCE
 	-I. -Isoft -I$(TEST_PATH) -I$(PROJECT_PATH)/tests
 
 COMMON_SRCS = kem noise util frodo_macrify_reference frodokem_params random fips202
-PLATFORM_SRCS = op_hash sha256 sm3 endian
+PLATFORM_SRCS = op_hash op_matrix op_trng sha256 sm3 endian
 
 LIB = libpqc_frodokem.a
 TEST_EXE = test_frodokem_ref
@@ -28,6 +28,12 @@ $(LIB): $(COMMON_SRCS:%=%.o) $(PLATFORM_SRCS:%=%.o)
 
 op_hash.o:
 	$(CC) $(BASE_CFLAGS) -c soft/op_hash.c -o $@
+
+op_matrix.o:
+	$(CC) $(BASE_CFLAGS) -c soft/op_matrix.c -o $@
+
+op_trng.o:
+	$(CC) $(BASE_CFLAGS) -c soft/op_trng.c -o $@
 
 sha256.o:
 	$(CC) $(BASE_CFLAGS) -c soft/sha256.c -o $@

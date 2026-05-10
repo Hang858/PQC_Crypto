@@ -28,6 +28,8 @@ set(HQC_COMMON_SOURCES
     ${COMMON_PATH}/fips202.c
     ${CMAKE_CURRENT_SOURCE_DIR}/soft/endian.c
     ${CMAKE_CURRENT_SOURCE_DIR}/soft/op_hash.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/soft/op_matrix.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/soft/op_trng.c
     ${CMAKE_CURRENT_SOURCE_DIR}/soft/sha256.c
     ${CMAKE_CURRENT_SOURCE_DIR}/soft/sm3.c
 )
@@ -65,6 +67,8 @@ target_link_libraries(test_hqc_ref PRIVATE pqc_hqc)
 add_executable(kat_runtime
     ${CMAKE_CURRENT_SOURCE_DIR}/test/kat_runtime.c
 )
+
+target_compile_definitions(kat_runtime PRIVATE HQC_USE_DETERMINISTIC_PRNG)
 
 target_include_directories(kat_runtime PRIVATE
     ${INCLUDE_PATH}
