@@ -30,7 +30,7 @@
  *
  * @see hqc_randombytes
  */
-int crypto_kem_keypair_impl(uint8_t *ek_kem, uint8_t *dk_kem) {
+int crypto_kem_keypair(uint8_t *ek_kem, uint8_t *dk_kem) {
 #ifdef VERBOSE
     HQC_LOGF("\n\n\n### KEYGEN ###");
 #endif
@@ -129,7 +129,7 @@ cleanup:
  *
  * @see hqc_randombytes
  */
-int crypto_kem_enc_impl(uint8_t *c_kem, uint8_t *K, const uint8_t *ek_kem) {
+int crypto_kem_enc(uint8_t *c_kem, uint8_t *K, const uint8_t *ek_kem) {
 #ifdef VERBOSE
     HQC_LOGF("\n\n\n\n### ENCAPS ###");
 #endif
@@ -222,7 +222,7 @@ cleanup:
  *
  * @return Returns 0 on success.
  */
-int crypto_kem_dec_impl(uint8_t *K_prime, const uint8_t *c_kem, const uint8_t *dk_kem) {
+int crypto_kem_dec(uint8_t *K_prime, const uint8_t *c_kem, const uint8_t *dk_kem) {
 #ifdef VERBOSE
     HQC_LOGF("\n\n\n\n### DECAPS ###");
 #endif

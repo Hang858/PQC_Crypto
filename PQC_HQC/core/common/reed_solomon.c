@@ -86,7 +86,7 @@ void reed_solomon_encode(uint64_t *cdw, const uint64_t *msg) {
     uint8_t gate_value = 0;
 
     uint16_t *tmp = calloc(HQC_MAX_G, sizeof(uint16_t));
-    const uint16_t *rs_poly = g_hqc_params->rs_poly;
+    uint16_t rs_poly[] = {RS_POLY_COEFS};
 
     uint8_t *msg_bytes = calloc(HQC_MAX_K, sizeof(uint8_t));
     uint8_t *cdw_bytes = calloc(HQC_MAX_N1, sizeof(uint8_t));
@@ -127,12 +127,9 @@ void reed_solomon_encode(uint64_t *cdw, const uint64_t *msg) {
  * @param[in] cdw Array of size PARAM_N1 storing the received vector
  */
 void compute_syndromes(uint16_t *syndromes, uint8_t *cdw) {
-    const uint16_t *alpha_ij_pow = g_hqc_params->alpha_ij_pow;
-    const uint16_t alpha_ij_cols = g_hqc_params->alpha_ij_cols;
-
     for (size_t i = 0; i < 2 * PARAM_DELTA; ++i) {
         for (size_t j = 1; j < PARAM_N1; ++j) {
-            syndromes[i] ^= gf_mul(cdw[j], alpha_ij_pow[i * alpha_ij_cols + (j - 1)]);
+            syndromes[i] ^= gf_mul(cdw[j], gf_exp[((i + 1) * j) % PARAM_GF_MUL_ORDER]);
         }
         syndromes[i] ^= cdw[0];
     }

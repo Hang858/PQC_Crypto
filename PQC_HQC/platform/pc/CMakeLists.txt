@@ -44,6 +44,8 @@ target_include_directories(pqc_hqc PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/soft
 )
 
+target_compile_definitions(pqc_hqc PRIVATE USE_HARDWARE_HASH)
+
 add_executable(test_hqc_ref
     ${CMAKE_CURRENT_SOURCE_DIR}/test/tests_main.c
     ${CMAKE_CURRENT_SOURCE_DIR}/test/test_kem_ref.c

@@ -1,47 +1,80 @@
-#ifndef PQC_HQC_RUNTIME_PARAMETERS_H
-#define PQC_HQC_RUNTIME_PARAMETERS_H
+#ifndef PQC_HQC_PARAMETERS_H
+#define PQC_HQC_PARAMETERS_H
 
 #include "api.h"
-#include "hqc_params.h"
 
 #define CEIL_DIVIDE(a, b) (((a) / (b)) + ((a) % (b) == 0 ? 0 : 1))
 #define BITMASK(a, size) ((uint64_t)((1ULL << ((a) % (size))) - 1ULL))
 
-#define PARAM_N (g_hqc_params->n)
-#define PARAM_N1 (g_hqc_params->n1)
-#define PARAM_N2 (g_hqc_params->n2)
-#define PARAM_N1N2 (g_hqc_params->n1n2)
-#define PARAM_OMEGA (g_hqc_params->omega)
-#define PARAM_OMEGA_E (g_hqc_params->omega_e)
-#define PARAM_OMEGA_R (g_hqc_params->omega_r)
-#define PARAM_SECURITY (g_hqc_params->security_bits)
-#define PARAM_SECURITY_BYTES (g_hqc_params->security_bytes)
-#define PARAM_DFR_EXP (g_hqc_params->security_bits)
+#define PARAM_N 17669
+#define PARAM_N1 46
+#define PARAM_N2 384
+#define PARAM_N1N2 17664
+#define PARAM_OMEGA 66
+#define PARAM_OMEGA_E 75
+#define PARAM_OMEGA_R 75
+#define PARAM_SECURITY 128
+#define PARAM_SECURITY_BYTES 16
+#define PARAM_DFR_EXP 128
 
-#define SECRET_KEY_BYTES (g_hqc_params->secretkeybytes)
-#define PUBLIC_KEY_BYTES (g_hqc_params->publickeybytes)
-#define SHARED_SECRET_BYTES (g_hqc_params->bytes)
-#define CIPHERTEXT_BYTES (g_hqc_params->ciphertextbytes)
+#define SECRET_KEY_BYTES CRYPTO_SECRETKEYBYTES
+#define PUBLIC_KEY_BYTES CRYPTO_PUBLICKEYBYTES
+#define SHARED_SECRET_BYTES CRYPTO_BYTES
+#define CIPHERTEXT_BYTES CRYPTO_CIPHERTEXTBYTES
 
-#define VEC_N_SIZE_BYTES (g_hqc_params->vec_n_size_bytes)
-#define VEC_K_SIZE_BYTES (g_hqc_params->vec_k_size_bytes)
-#define VEC_N1_SIZE_BYTES (g_hqc_params->vec_n1_size_bytes)
-#define VEC_N1N2_SIZE_BYTES (g_hqc_params->vec_n1n2_size_bytes)
-#define VEC_N_SIZE_64 (g_hqc_params->vec_n_size_64)
-#define VEC_N1_SIZE_64 (g_hqc_params->vec_n1_size_64)
-#define VEC_N1N2_SIZE_64 (g_hqc_params->vec_n1n2_size_64)
+#define VEC_N_SIZE_BYTES CEIL_DIVIDE(PARAM_N, 8)
+#define VEC_K_SIZE_BYTES PARAM_K
+#define VEC_N1_SIZE_BYTES PARAM_N1
+#define VEC_N1N2_SIZE_BYTES CEIL_DIVIDE(PARAM_N1N2, 8)
 
-#define PARAM_DELTA (g_hqc_params->delta)
-#define PARAM_M 8u
-#define PARAM_GF_POLY 0x11Du
-#define PARAM_GF_MUL_ORDER 255u
-#define PARAM_K (g_hqc_params->k)
-#define PARAM_G (g_hqc_params->g)
-#define PARAM_FFT (g_hqc_params->fft)
+#define VEC_N_SIZE_64 CEIL_DIVIDE(PARAM_N, 64)
+#define VEC_N1_SIZE_64 CEIL_DIVIDE(PARAM_N1, 8)
+#define VEC_N1N2_SIZE_64 CEIL_DIVIDE(PARAM_N1N2, 64)
 
-#define SEED_BYTES HQC_SEED_BYTES
-#define SALT_BYTES HQC_SALT_BYTES
-#define PARAM_N_MU (g_hqc_params->n_mu)
-#define UTILS_REJECTION_THRESHOLD (g_hqc_params->rejection_threshold)
+#define PARAM_DELTA 15
+#define PARAM_M 8
+#define PARAM_GF_POLY 0x11D
+#define PARAM_GF_MUL_ORDER 255
+#define PARAM_K 16
+#define PARAM_G 31
+#define PARAM_FFT 4
+
+#define RS_POLY_COEFS                                                                                                \
+    89, 69, 153, 116, 176, 117, 111, 75, 73, 233, 242, 233, 65, 210, 21, 139, 103, 173, 67, 118,                   \
+        105, 210, 174, 110, 74, 69, 228, 82, 255, 181, 1
+
+#define SEED_BYTES 32
+#define SALT_BYTES 16
+#ifndef HQC_SEED_BYTES
+#define HQC_SEED_BYTES SEED_BYTES
+#endif
+#ifndef HQC_SALT_BYTES
+#define HQC_SALT_BYTES SALT_BYTES
+#endif
+#ifndef HQC_SHARED_SECRET_BYTES
+#define HQC_SHARED_SECRET_BYTES SHARED_SECRET_BYTES
+#endif
+
+#define PARAM_N_MU 243079ULL
+#define UTILS_REJECTION_THRESHOLD 16767881
+
+#define HQC_MAX_N PARAM_N
+#define HQC_MAX_N1 PARAM_N1
+#define HQC_MAX_N2 PARAM_N2
+#define HQC_MAX_N1N2 PARAM_N1N2
+#define HQC_MAX_OMEGA_R PARAM_OMEGA_R
+#define HQC_MAX_SECURITY_BYTES PARAM_SECURITY_BYTES
+#define HQC_MAX_DELTA PARAM_DELTA
+#define HQC_MAX_K PARAM_K
+#define HQC_MAX_G PARAM_G
+#define HQC_MAX_FFT PARAM_FFT
+#define HQC_MAX_VEC_N_SIZE_BYTES VEC_N_SIZE_BYTES
+#define HQC_MAX_VEC_N1N2_SIZE_BYTES VEC_N1N2_SIZE_BYTES
+#define HQC_MAX_VEC_N_SIZE_64 VEC_N_SIZE_64
+#define HQC_MAX_VEC_N1_SIZE_64 VEC_N1_SIZE_64
+#define HQC_MAX_VEC_N1N2_SIZE_64 VEC_N1N2_SIZE_64
+#define HQC_MAX_PUBLIC_KEY_BYTES PUBLIC_KEY_BYTES
+#define HQC_MAX_SECRET_KEY_BYTES SECRET_KEY_BYTES
+#define HQC_MAX_CIPHERTEXT_BYTES CIPHERTEXT_BYTES
 
 #endif

@@ -33,7 +33,7 @@ crypto_memset.o:
 	$(CC) $(BASE_CFLAGS) -c $(COMMON_PATH)/crypto_memset.c -o $@
 
 fips202.o:
-	$(CC) $(BASE_CFLAGS) -c $(COMMON_PATH)/fips202.c -o $@
+	$(CC) $(BASE_CFLAGS) -DUSE_HARDWARE_HASH -c $(COMMON_PATH)/fips202.c -o $@
 
 endian.o:
 	$(CC) $(BASE_CFLAGS) -c soft/endian.c -o $@

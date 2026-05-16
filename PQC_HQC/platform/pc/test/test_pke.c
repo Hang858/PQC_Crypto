@@ -2,20 +2,18 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "hqc_params.h"
 #include "api.h"
 #include "runtime_params.h"
 #include "hqc.h"
 #include "munit_utils.h"
 
-static void run_pke_api(hqc_level_t level) {
-    const hqc_params_t *p = HQC_get_params(level);
-    size_t k_bytes = p->k;
+static void run_pke_api(void) {
+    size_t k_bytes = PARAM_K;
     unsigned char seed[32] = {0};
     unsigned char theta[32] = {0};
     unsigned char *m1 = calloc(k_bytes, 1);
     unsigned char *m2 = calloc(k_bytes, 1);
-    unsigned char *ek_pke = calloc(p->publickeybytes, 1);
+    unsigned char *ek_pke = calloc(PUBLIC_KEY_BYTES, 1);
     unsigned char *dk_pke = calloc(32, 1);
     ciphertext_pke_t *c_pke = calloc(1, sizeof(*c_pke));
 
@@ -23,7 +21,6 @@ static void run_pke_api(hqc_level_t level) {
     munit_rand_memory(32, theta);
     munit_rand_memory((uint32_t)k_bytes, m1);
 
-    HQC_select_level(level);
     hqc_pke_keygen(ek_pke, dk_pke, seed);
     hqc_pke_encrypt(c_pke, ek_pke, (uint64_t *)m1, theta);
     munit_assert_int(hqc_pke_decrypt((uint64_t *)m2, dk_pke, c_pke), ==, 0);
@@ -41,9 +38,7 @@ static MunitResult test_pke_api(const MunitParameter params[], void *user_data) 
     (void)params;
     (void)user_data;
 
-    run_pke_api(HQC_1);
-    run_pke_api(HQC_3);
-    run_pke_api(HQC_5);
+    run_pke_api();
     return MUNIT_OK;
 }
 

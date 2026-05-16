@@ -14,37 +14,15 @@ static void fprint_bstr(FILE *fp, const char *label, const unsigned char *data, 
     fprintf(fp, "\n");
 }
 
-static int parse_level(const char *arg, hqc_level_t *level) {
-    if (strcmp(arg, "1") == 0 || strcmp(arg, "hqc-1") == 0) {
-        *level = HQC_1;
-        return 0;
-    }
-    if (strcmp(arg, "3") == 0 || strcmp(arg, "hqc-3") == 0) {
-        *level = HQC_3;
-        return 0;
-    }
-    if (strcmp(arg, "5") == 0 || strcmp(arg, "hqc-5") == 0) {
-        *level = HQC_5;
-        return 0;
-    }
-    return -1;
-}
-
 int main(int argc, char **argv) {
-    if (argc != 4) {
-        fprintf(stderr, "usage: %s <1|3|5> <unused.req> <output.rsp>\n", argv[0]);
+    if (argc != 3) {
+        fprintf(stderr, "usage: %s <unused.req> <output.rsp>\n", argv[0]);
         return 2;
     }
 
-    hqc_level_t level;
-    if (parse_level(argv[1], &level) != 0 || HQC_select_level(level) != 0) {
-        fprintf(stderr, "invalid HQC level: %s\n", argv[1]);
-        return 2;
-    }
-
-    const hqc_params_t *params = HQC_get_params(level);
-    FILE *rsp = fopen(argv[3], "w");
-    (void)argv[2];
+    const hqc_params_t *params = HQC_get_params(HQC_1);
+    FILE *rsp = fopen(argv[2], "w");
+    (void)argv[1];
     if (rsp == NULL) {
         fprintf(stderr, "failed to open KAT output file\n");
         if (rsp != NULL) {
@@ -84,8 +62,8 @@ int main(int argc, char **argv) {
         fprint_bstr(rsp, "seed = ", seed, sizeof(seed));
 
         prng_init(seed, NULL, 48, 0);
-        if (crypto_kem_keypair(level, pk, sk) != 0 || crypto_kem_enc(level, ct, ss, pk) != 0 ||
-            crypto_kem_dec(level, ss_dec, ct, sk) != 0 || memcmp(ss, ss_dec, params->bytes) != 0) {
+        if (crypto_kem_keypair(pk, sk) != 0 || crypto_kem_enc(ct, ss, pk) != 0 ||
+            crypto_kem_dec(ss_dec, ct, sk) != 0 || memcmp(ss, ss_dec, params->bytes) != 0) {
             fprintf(stderr, "crypto failure at count %d\n", count);
             fclose(rsp);
             free(pk);
