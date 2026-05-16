@@ -1,78 +1,63 @@
 # PQC_HQC
 
-HQC KEM implementation in the unified PQC library layout. This module currently supports the `HQC-1` parameter set only.
+## Overview
+
+This directory is a self-contained HQC KEM module for the unified PQC layout. It currently supports `HQC-1`.
 
 ## Directory Layout
 
-- `include/`: public headers.
+- `include/`: public API and parameter headers.
 - `core/common/`: algorithm implementation.
-- `platform/pc/`: PC build files, operator interface, software operator adapters, tests, and KAT runner.
-- `tests/`: MUnit support code.
+- `platform/pc/`: standalone PC build, operator interface, software operator implementations, tests, and KAT runner.
+- `platform/pc/soft/`: common software operator set shared across all PQC modules.
+- `platform/pc/test/`: local test sources and KAT data needed by this module.
 
-## Public Interface
-
-Include `include/api.h` for the NIST-style fixed-level KEM API. Include `include/hqc_params.h` if explicit level selection or parameter lookup is needed.
-
-### Parameter Set
+## Supported Parameters
 
 | Level | Algorithm | Public key | Secret key | Ciphertext | Shared secret |
 | --- | --- | ---: | ---: | ---: | ---: |
 | `HQC_1` | `HQC-1` | 2241 bytes | 2321 bytes | 4433 bytes | 32 bytes |
 
-The fixed API macros are:
+Fixed API macros:
 
 - `CRYPTO_PUBLICKEYBYTES`: 2241
 - `CRYPTO_SECRETKEYBYTES`: 2321
 - `CRYPTO_CIPHERTEXTBYTES`: 4433
 - `CRYPTO_BYTES`: 32
 
+## Public API
+
+Include `include/api.h` for the fixed HQC-1 KEM API.
+
 ### `int crypto_kem_keypair(unsigned char *pk, unsigned char *sk)`
 
 Generates an HQC-1 KEM key pair.
 
-Parameters:
-
-- `pk` OUT: public key buffer. Must be at least `CRYPTO_PUBLICKEYBYTES` bytes.
-- `sk` OUT: secret key buffer. Must be at least `CRYPTO_SECRETKEYBYTES` bytes.
-
-Return value:
-
-- `0` on success.
-- Non-zero on failure.
+- `pk` OUT: public key buffer, at least `CRYPTO_PUBLICKEYBYTES` bytes.
+- `sk` OUT: secret key buffer, at least `CRYPTO_SECRETKEYBYTES` bytes.
+- Returns `0` on success, non-zero on failure.
 
 ### `int crypto_kem_enc(unsigned char *ct, unsigned char *ss, const unsigned char *pk)`
 
 Encapsulates a shared secret to an HQC-1 public key.
 
-Parameters:
-
-- `ct` OUT: ciphertext buffer. Must be at least `CRYPTO_CIPHERTEXTBYTES` bytes.
-- `ss` OUT: shared secret buffer. Must be at least `CRYPTO_BYTES` bytes.
-- `pk` IN: public key buffer. Must contain `CRYPTO_PUBLICKEYBYTES` bytes.
-
-Return value:
-
-- `0` on success.
-- Non-zero on failure.
+- `ct` OUT: ciphertext buffer, at least `CRYPTO_CIPHERTEXTBYTES` bytes.
+- `ss` OUT: shared secret buffer, at least `CRYPTO_BYTES` bytes.
+- `pk` IN: public key buffer containing `CRYPTO_PUBLICKEYBYTES` bytes.
+- Returns `0` on success, non-zero on failure.
 
 ### `int crypto_kem_dec(unsigned char *ss, const unsigned char *ct, const unsigned char *sk)`
 
 Decapsulates an HQC-1 ciphertext with a secret key.
 
-Parameters:
+- `ss` OUT: shared secret buffer, at least `CRYPTO_BYTES` bytes.
+- `ct` IN: ciphertext buffer containing `CRYPTO_CIPHERTEXTBYTES` bytes.
+- `sk` IN: secret key buffer containing `CRYPTO_SECRETKEYBYTES` bytes.
+- Returns `0` on success, non-zero on failure.
 
-- `ss` OUT: shared secret buffer. Must be at least `CRYPTO_BYTES` bytes.
-- `ct` IN: ciphertext buffer. Must contain `CRYPTO_CIPHERTEXTBYTES` bytes.
-- `sk` IN: secret key buffer. Must contain `CRYPTO_SECRETKEYBYTES` bytes.
+### Parameter Helpers
 
-Return value:
-
-- `0` on success.
-- Non-zero on failure.
-
-### Runtime-Level Helpers
-
-`hqc_params.h` exposes:
+Include `include/hqc_params.h` for:
 
 ```c
 const hqc_params_t *HQC_get_params(hqc_level_t level);
@@ -82,63 +67,67 @@ int HQC_crypto_kem_enc(hqc_level_t level, unsigned char *ct, unsigned char *ss, 
 int HQC_crypto_kem_dec(hqc_level_t level, unsigned char *ss, const unsigned char *ct, const unsigned char *sk);
 ```
 
-Only `HQC_1` is valid. `HQC_get_params()` returns `NULL` for invalid levels. The level-selecting KEM wrappers return `-1` for invalid levels.
+Only `HQC_1` is valid. Invalid levels return `NULL` from `HQC_get_params()` and `-1` from the level-selecting wrappers.
 
 ## Operator Interface
 
 The PC build uses `platform/pc/operator_interface.h`.
 
-- Random bytes use `OP_trng`.
-- SHAKE/SHA3 operations in FIPS202 are compiled with `USE_HARDWARE_HASH` and call `OP_hash`, `OP_hash_init`, `OP_hash_absorb`, and `OP_hash_squeeze`.
-- PC software fallback implementations are under `platform/pc/soft/`.
+- `OP_trng` supplies random bytes.
+- `OP_hash`, `OP_hash_init`, `OP_hash_absorb`, and `OP_hash_squeeze` are used by FIPS202 when `USE_HARDWARE_HASH` is enabled.
+- `OP_matrix_mul_8x8` and `OP_fpr_*` are provided in `soft/` for interface consistency, even when HQC does not call them.
 
-## Build Instructions
+The `platform/pc/soft/` directory intentionally contains the same software operator files as the other PQC modules:
 
-### Makefile Build
+```text
+endian.c endian.h op_fpr.c op_hash.c op_matrix.c op_trng.c sha256.c sha256.h sm3.c sm3.h
+```
+
+## Build
+
+Run from this module directory or adjust the path accordingly.
 
 ```sh
-cd PQC_Crypto/PQC_HQC/platform/pc
+cd platform/pc
 make clean
 make
 ```
 
-Build parameters:
+Build variables:
 
-- `CC`: C compiler. Default: `gcc`.
-- `AR`: static library archiver. Default: `ar`.
-- `BASE_CFLAGS`: optimization, warning, standard, include, and platform flags.
-- `RUNTIME_CFLAGS`: flags used for common runtime sources. Defaults to `$(BASE_CFLAGS)`.
+- `CC`: C compiler, default `gcc`.
+- `AR`: static library archiver, default `ar`.
+- `BASE_CFLAGS`: warning, optimization, C standard, include, and platform flags.
+- `RUNTIME_CFLAGS`: common source flags, default `$(BASE_CFLAGS)`.
 
-Important compile definitions:
+Important definitions:
 
-- `USE_HARDWARE_HASH`: enabled for `fips202.c`; routes SHAKE/SHA3 calls through the operator interface.
-- `HQC_USE_DETERMINISTIC_PRNG`: used only by the KAT runner object to reproduce official KAT output.
+- `USE_HARDWARE_HASH`: routes SHAKE/SHA3 through the operator interface.
+- `HQC_USE_DETERMINISTIC_PRNG`: used only by the KAT runner.
 
-Build outputs:
+Outputs:
 
-- `libpqc_hqc.a`: static library.
-- `test_hqc_ref`: unit test binary, built by `make test`.
-- `kat_runtime`: KAT runner, built by `make kat_runtime`.
+- `libpqc_hqc.a`
+- `test_hqc_ref`
+- `kat_runtime`
 
-### CMake Build
+CMake is also supported:
 
 ```sh
-cd PQC_Crypto/PQC_HQC/platform/pc
+cd platform/pc
 cmake -S . -B build
 cmake --build build
 ```
 
-CMake target `pqc_hqc` defines `USE_HARDWARE_HASH`. The `kat_runtime` executable defines `HQC_USE_DETERMINISTIC_PRNG`.
-
 ## Test and KAT
 
-The commands below are written relative to the repository root, shown as `<repo-root>`. The official HQC reference KAT files are expected in a sibling directory named `hqc/` at `<repo-root>/hqc`. If your delivery package stores reference files elsewhere, replace the reference path accordingly.
+The reference KAT response is local to this module under `platform/pc/test/kat/`.
 
 ```sh
-cd <repo-root>/PQC_Crypto/PQC_HQC/platform/pc
+cd platform/pc
 make test
 make kat_runtime
 mkdir -p kat
 ./kat_runtime hqc-1 kat/hqc-1.rsp
-cmp -s kat/hqc-1.rsp <repo-root>/hqc/kats/ref/hqc-1/PQCkemKAT_2321.rsp
+cmp -s kat/hqc-1.rsp test/kat/PQCkemKAT_2321.rsp
 ```

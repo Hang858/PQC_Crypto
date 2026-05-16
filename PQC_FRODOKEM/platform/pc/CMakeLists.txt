@@ -22,6 +22,7 @@ set(FRODOKEM_COMMON_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/soft/op_hash.c
     ${CMAKE_CURRENT_SOURCE_DIR}/soft/op_matrix.c
     ${CMAKE_CURRENT_SOURCE_DIR}/soft/op_trng.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/soft/op_fpr.c
     ${CMAKE_CURRENT_SOURCE_DIR}/soft/sha256.c
     ${CMAKE_CURRENT_SOURCE_DIR}/soft/sm3.c
 )
@@ -54,7 +55,6 @@ target_include_directories(test_frodokem_ref PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/soft
     ${CMAKE_CURRENT_SOURCE_DIR}/test
-    ${PROJECT_PATH}/tests
 )
 
 target_link_libraries(test_frodokem_ref PRIVATE pqc_frodokem)

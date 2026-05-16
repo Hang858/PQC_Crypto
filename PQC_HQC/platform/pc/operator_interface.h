@@ -43,6 +43,8 @@ extern const int32_t M256_Dilithium[512];
 #define OP_STATE_SIZE_SM3 104
 #define OP_STATE_SIZE_SHA3 208
 
+typedef double op_fpr_t;
+
 #define ABORT_IF_FAIL(x) if ((x) != OP_SUCCESS) { \
         abort(); \
     } \
@@ -191,6 +193,12 @@ int OP_trng(void *buffer, int size);
  * @return          0: 成功; -1: 失败。
  */
 int OP_matrix_mul_8x8(uint16_t z_out[8][8], const uint16_t x_in[8][8], const uint16_t y_in[8][8], uint16_t q);
+int OP_fpr_add(op_fpr_t a, op_fpr_t b, op_fpr_t *out);
+int OP_fpr_sub(op_fpr_t a, op_fpr_t b, op_fpr_t *out);
+int OP_fpr_mul(op_fpr_t a, op_fpr_t b, op_fpr_t *out);
+int OP_fpr_div(op_fpr_t a, op_fpr_t b, op_fpr_t *out);
+int OP_fpr_sqrt(op_fpr_t a, op_fpr_t *out);
+int OP_fpr_lt(op_fpr_t a, op_fpr_t b, uint8_t *out);
  
  
 /**

@@ -5,17 +5,17 @@ PROJECT_PATH = ../..
 INCLUDE_PATH = $(PROJECT_PATH)/include
 CORE_PATH = $(PROJECT_PATH)/core
 COMMON_PATH = $(CORE_PATH)/common
-MUNIT_PATH = $(PROJECT_PATH)/tests/external/munit
+MUNIT_PATH = $(TEST_PATH)/external/munit
 TEST_PATH = test
 
 BASE_CFLAGS = -O3 -Wall -Wextra -Wpedantic -std=c99 \
 	-I$(INCLUDE_PATH) -I$(CORE_PATH) -I$(COMMON_PATH) \
-	-I. -Isoft -I$(TEST_PATH) -I$(PROJECT_PATH)/tests -I$(MUNIT_PATH)
+	-I. -Isoft -I$(TEST_PATH) -I$(MUNIT_PATH)
 
 RUNTIME_CFLAGS = $(BASE_CFLAGS)
 
 COMMON_SRCS = code hqc kem parsing symmetric vector fft gf gf2x reed_muller reed_solomon hqc_params
-PLATFORM_SRCS = crypto_memset fips202 endian op_hash op_matrix op_trng sha256 sm3
+PLATFORM_SRCS = crypto_memset fips202 endian op_hash op_matrix op_trng op_fpr sha256 sm3
 
 LIB = libpqc_hqc.a
 TEST_EXE = test_hqc_ref
@@ -46,6 +46,9 @@ op_matrix.o:
 
 op_trng.o:
 	$(CC) $(BASE_CFLAGS) -c soft/op_trng.c -o $@
+
+op_fpr.o:
+	$(CC) $(BASE_CFLAGS) -c soft/op_fpr.c -o $@
 
 sha256.o:
 	$(CC) $(BASE_CFLAGS) -c soft/sha256.c -o $@

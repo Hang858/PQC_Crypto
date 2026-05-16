@@ -9,10 +9,10 @@ TEST_PATH = test
 
 BASE_CFLAGS = -O3 -Wall -Wextra -Wpedantic -std=c99 -DNIX -D_AMD64_ -D_REFERENCE_ -D_SHAKE128_FOR_A_ -DUSE_HARDWARE_HASH \
 	-I$(INCLUDE_PATH) -I$(CORE_PATH) -I$(COMMON_PATH) \
-	-I. -Isoft -I$(TEST_PATH) -I$(PROJECT_PATH)/tests
+	-I. -Isoft -I$(TEST_PATH)
 
 COMMON_SRCS = kem noise util frodo_macrify_reference frodokem_params random fips202
-PLATFORM_SRCS = op_hash op_matrix op_trng sha256 sm3 endian
+PLATFORM_SRCS = op_hash op_matrix op_trng op_fpr sha256 sm3 endian
 
 LIB = libpqc_frodokem.a
 TEST_EXE = test_frodokem_ref
@@ -35,6 +35,9 @@ op_matrix.o:
 op_trng.o:
 	$(CC) $(BASE_CFLAGS) -c soft/op_trng.c -o $@
 
+op_fpr.o:
+	$(CC) $(BASE_CFLAGS) -c soft/op_fpr.c -o $@
+
 sha256.o:
 	$(CC) $(BASE_CFLAGS) -c soft/sha256.c -o $@
 
@@ -51,10 +54,10 @@ kat_runtime.o:
 	$(CC) $(BASE_CFLAGS) -c $(TEST_PATH)/kat_runtime.c -o $@
 
 rng.o:
-	$(CC) $(BASE_CFLAGS) -c $(PROJECT_PATH)/tests/rng.c -o $@
+	$(CC) $(BASE_CFLAGS) -c $(TEST_PATH)/rng.c -o $@
 
 aes_c.o:
-	$(CC) $(BASE_CFLAGS) -c $(PROJECT_PATH)/tests/aes_c.c -o $@
+	$(CC) $(BASE_CFLAGS) -c $(TEST_PATH)/aes_c.c -o $@
 
 $(TEST_EXE): $(LIB) tests_main.o
 	$(CC) $(BASE_CFLAGS) -o $@ tests_main.o -Wl,--whole-archive $(LIB) -Wl,--no-whole-archive

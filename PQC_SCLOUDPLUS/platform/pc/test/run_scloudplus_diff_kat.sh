@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"
 WORK="${ROOT}/PQC_SCLOUDPLUS/platform/pc/test/kat_build"
-ORIG="${ROOT}/../scloudplus/src"
+ORIG="${SCLOUDPLUS_ORIG:-${ROOT}/PQC_Crypto/PQC_SCLOUDPLUS/platform/pc/test/original/src}"
 MOD="${ROOT}/PQC_SCLOUDPLUS"
 PC="${MOD}/platform/pc"
 

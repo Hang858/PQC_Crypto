@@ -32,7 +32,9 @@
 #include <string.h>
 
 #include "inner.h"
+#include "operator_interface.h"
 
+#ifndef USE_HARDWARE_HASH
 
 /*
  * Round constants.
@@ -483,11 +485,15 @@ process_block(uint64_t *A)
 	A[20] = ~A[20];
 }
 
+#endif
 
 /* see inner.h */
 void
 Zf(i_shake256_init)(inner_shake256_context *sc)
 {
+#ifdef USE_HARDWARE_HASH
+	(void)OP_hash_init(OP_ALG_SHAKE256, sc, (int)sizeof *sc);
+#else
 	sc->dptr = 0;
 
 	/*
@@ -495,12 +501,26 @@ Zf(i_shake256_init)(inner_shake256_context *sc)
 	 * of local endianness.
 	 */
 	memset(sc->st.A, 0, sizeof sc->st.A);
+#endif
 }
 
 /* see inner.h */
 void
 Zf(i_shake256_inject)(inner_shake256_context *sc, const uint8_t *in, size_t len)
 {
+#ifdef USE_HARDWARE_HASH
+	while (len > 0) {
+		size_t clen;
+
+		clen = len;
+		if (clen > (size_t)INT32_MAX) {
+			clen = (size_t)INT32_MAX;
+		}
+		(void)OP_hash_absorb(OP_ALG_SHAKE256, sc, (int)sizeof *sc, in, (int)clen);
+		in += clen;
+		len -= clen;
+	}
+#else
 	size_t dptr;
 
 	dptr = (size_t)sc->dptr;
@@ -526,12 +546,16 @@ Zf(i_shake256_inject)(inner_shake256_context *sc, const uint8_t *in, size_t len)
 		}
 	}
 	sc->dptr = dptr;
+#endif
 }
 
 /* see falcon.h */
 void
 Zf(i_shake256_flip)(inner_shake256_context *sc)
 {
+#ifdef USE_HARDWARE_HASH
+	(void)sc;
+#else
 	/*
 	 * We apply padding and pre-XOR the value into the state. We
 	 * set dptr to the end of the buffer, so that first call to
@@ -543,12 +567,26 @@ Zf(i_shake256_flip)(inner_shake256_context *sc)
 	sc->st.A[v >> 3] ^= (uint64_t)0x1F << ((v & 7) << 3);
 	sc->st.A[16] ^= (uint64_t)0x80 << 56;
 	sc->dptr = 136;
+#endif
 }
 
 /* see falcon.h */
 void
 Zf(i_shake256_extract)(inner_shake256_context *sc, uint8_t *out, size_t len)
 {
+#ifdef USE_HARDWARE_HASH
+	while (len > 0) {
+		size_t clen;
+
+		clen = len;
+		if (clen > (size_t)INT32_MAX) {
+			clen = (size_t)INT32_MAX;
+		}
+		(void)OP_hash_squeeze(OP_ALG_SHAKE256, sc, (int)sizeof *sc, out, (int)clen);
+		out += clen;
+		len -= clen;
+	}
+#else
 	size_t dptr;
 
 	dptr = (size_t)sc->dptr;
@@ -570,4 +608,5 @@ Zf(i_shake256_extract)(inner_shake256_context *sc, uint8_t *out, size_t len)
 		}
 	}
 	sc->dptr = dptr;
+#endif
 }

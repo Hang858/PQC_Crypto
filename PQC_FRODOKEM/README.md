@@ -1,19 +1,18 @@
 # PQC_FRODOKEM
 
-FrodoKEM implementation in the unified PQC library layout. This module supports runtime selection among FrodoKEM-640, FrodoKEM-976, and FrodoKEM-1344.
+## Overview
+
+This directory is a self-contained FrodoKEM module for the unified PQC layout. It supports runtime selection among FrodoKEM-640, FrodoKEM-976, and FrodoKEM-1344.
 
 ## Directory Layout
 
-- `include/`: public headers.
+- `include/`: public API and parameter headers.
 - `core/common/`: algorithm implementation.
-- `platform/pc/`: PC build files, operator interface, software operator adapters, tests, and KAT runner.
-- `tests/`: KAT support code.
+- `platform/pc/`: standalone PC build, operator interface, software operator implementations, tests, and KAT runner.
+- `platform/pc/soft/`: common software operator set shared across all PQC modules.
+- `platform/pc/test/`: local test/KAT sources and KAT response files needed by this module.
 
-## Public Interface
-
-Include `include/api.h` for the public KEM API. Include `include/frodokem_params.h` for parameter lookup and level-selection helpers.
-
-### Parameter Sets
+## Supported Parameters
 
 | Level | Algorithm | Public key | Secret key | Ciphertext | Shared secret |
 | --- | --- | ---: | ---: | ---: | ---: |
@@ -21,66 +20,51 @@ Include `include/api.h` for the public KEM API. Include `include/frodokem_params
 | `FRODOKEM_976` | `FrodoKEM-976` | 15632 bytes | 31296 bytes | 15792 bytes | 24 bytes |
 | `FRODOKEM_1344` | `FrodoKEM-1344` | 21520 bytes | 43088 bytes | 21696 bytes | 32 bytes |
 
-The max-size macros in `api.h` are:
+Max-size API macros:
 
 - `CRYPTO_PUBLICKEYBYTES`: 21520
 - `CRYPTO_SECRETKEYBYTES`: 43088
 - `CRYPTO_CIPHERTEXTBYTES`: 21696
 - `CRYPTO_BYTES`: 32
 
-Callers may allocate max-size buffers for all levels, or use `FRODOKEM_get_params(level)` to allocate exact sizes.
+Callers may allocate max-size buffers for all levels, or call `FRODOKEM_get_params(level)` for exact sizes.
+
+## Public API
+
+Include `include/api.h` for the KEM API.
 
 ### `int crypto_kem_keypair(frodokem_level_t level, uint8_t *pk, uint8_t *sk)`
 
 Generates a FrodoKEM key pair for `level`.
 
-Parameters:
-
-- `level` IN: one of `FRODOKEM_640`, `FRODOKEM_976`, or `FRODOKEM_1344`.
-- `pk` OUT: public key buffer. Must be at least `params->publickeybytes` bytes.
-- `sk` OUT: secret key buffer. Must be at least `params->secretkeybytes` bytes.
-
-Return value:
-
-- `0` on success.
-- `-1` if `level` is invalid.
-- Other non-zero values may indicate internal failure.
+- `level` IN: `FRODOKEM_640`, `FRODOKEM_976`, or `FRODOKEM_1344`.
+- `pk` OUT: public key buffer, at least `params->publickeybytes` bytes.
+- `sk` OUT: secret key buffer, at least `params->secretkeybytes` bytes.
+- Returns `0` on success, `-1` for invalid level, or another non-zero value on internal failure.
 
 ### `int crypto_kem_enc(frodokem_level_t level, uint8_t *ct, uint8_t *ss, const uint8_t *pk)`
 
 Encapsulates a shared secret to a FrodoKEM public key.
 
-Parameters:
-
 - `level` IN: selected FrodoKEM parameter set.
-- `ct` OUT: ciphertext buffer. Must be at least `params->ciphertextbytes` bytes.
-- `ss` OUT: shared secret buffer. Must be at least `params->bytes` bytes.
-- `pk` IN: public key buffer. Must contain `params->publickeybytes` bytes.
-
-Return value:
-
-- `0` on success.
-- `-1` if `level` is invalid.
-- Other non-zero values may indicate internal failure.
+- `ct` OUT: ciphertext buffer, at least `params->ciphertextbytes` bytes.
+- `ss` OUT: shared secret buffer, at least `params->bytes` bytes.
+- `pk` IN: public key buffer containing `params->publickeybytes` bytes.
+- Returns `0` on success, `-1` for invalid level, or another non-zero value on internal failure.
 
 ### `int crypto_kem_dec(frodokem_level_t level, uint8_t *ss, const uint8_t *ct, const uint8_t *sk)`
 
 Decapsulates a FrodoKEM ciphertext with a secret key.
 
-Parameters:
-
 - `level` IN: selected FrodoKEM parameter set.
-- `ss` OUT: shared secret buffer. Must be at least `params->bytes` bytes.
-- `ct` IN: ciphertext buffer. Must contain `params->ciphertextbytes` bytes.
-- `sk` IN: secret key buffer. Must contain `params->secretkeybytes` bytes.
-
-Return value:
-
-- `0` on success.
-- `-1` if `level` is invalid.
-- Other non-zero values may indicate internal failure.
+- `ss` OUT: shared secret buffer, at least `params->bytes` bytes.
+- `ct` IN: ciphertext buffer containing `params->ciphertextbytes` bytes.
+- `sk` IN: secret key buffer containing `params->secretkeybytes` bytes.
+- Returns `0` on success, `-1` for invalid level, or another non-zero value on internal failure.
 
 ### Parameter Helpers
+
+Include `include/frodokem_params.h` for:
 
 ```c
 const frodokem_params_t *FRODOKEM_get_params(frodokem_level_t level);
@@ -91,66 +75,69 @@ int FRODOKEM_crypto_kem_dec(frodokem_level_t level, uint8_t *ss, const uint8_t *
 int FRODOKEM_crypto_kem_keypair_enc(frodokem_level_t level, uint8_t *ct, uint8_t *ss, uint8_t *pk, uint8_t *sk);
 ```
 
-`FRODOKEM_get_params()` returns `NULL` for invalid levels. `FRODOKEM_select_level()` and wrapper APIs return `-1` for invalid levels.
+Invalid levels return `NULL` from `FRODOKEM_get_params()` and `-1` from selection/wrapper APIs.
 
 ## Operator Interface
 
 The PC build uses `platform/pc/operator_interface.h`.
 
-- Random bytes use `OP_trng`.
-- SHAKE/SHA3 operations use `OP_hash*` when `USE_HARDWARE_HASH` is defined.
-- PC software fallback implementations are under `platform/pc/soft/`.
+- `OP_trng` supplies random bytes.
+- `OP_hash*` is used by FIPS202 when `USE_HARDWARE_HASH` is enabled.
+- `OP_matrix_mul_8x8` and `OP_fpr_*` are provided in `soft/` for interface consistency.
 
-## Build Instructions
+The `platform/pc/soft/` directory intentionally contains the same software operator files as the other PQC modules:
 
-### Makefile Build
+```text
+endian.c endian.h op_fpr.c op_hash.c op_matrix.c op_trng.c sha256.c sha256.h sm3.c sm3.h
+```
+
+## Build
+
+Run from this module directory or adjust the path accordingly.
 
 ```sh
-cd PQC_Crypto/PQC_FRODOKEM/platform/pc
+cd platform/pc
 make clean
 make
 ```
 
-Build parameters:
+Build variables:
 
-- `CC`: C compiler. Default: `gcc`.
-- `AR`: static library archiver. Default: `ar`.
-- `BASE_CFLAGS`: optimization, warning, standard, platform, and include flags.
+- `CC`: C compiler, default `gcc`.
+- `AR`: static library archiver, default `ar`.
+- `BASE_CFLAGS`: warning, optimization, C standard, platform, and include flags.
 
-Important compile definitions in `BASE_CFLAGS`:
+Important definitions:
 
-- `NIX`: selects the Unix-like build path.
-- `_AMD64_`: selects the AMD64 platform path.
-- `_REFERENCE_`: builds the reference FrodoKEM implementation.
-- `_SHAKE128_FOR_A_`: uses SHAKE128 for matrix A generation.
-- `USE_HARDWARE_HASH`: routes FIPS202 hash/XOF calls through the operator interface.
+- `NIX`: Unix-like build path.
+- `_AMD64_`: AMD64 build path.
+- `_REFERENCE_`: reference implementation.
+- `_SHAKE128_FOR_A_`: SHAKE128 for matrix A generation.
+- `USE_HARDWARE_HASH`: routes SHAKE/SHA3 through the operator interface.
 
-Build outputs:
+Outputs:
 
-- `libpqc_frodokem.a`: static library.
-- `test_frodokem_ref`: test binary, built by `make test`.
-- `kat_runtime`: KAT runner, built by `make kat_runtime`.
+- `libpqc_frodokem.a`
+- `test_frodokem_ref`
+- `kat_runtime`
 
-### CMake Build
+CMake is also supported for the library and normal test executable:
 
 ```sh
-cd PQC_Crypto/PQC_FRODOKEM/platform/pc
+cd platform/pc
 cmake -S . -B build
 cmake --build build
 ```
 
-The CMake file builds the static library and test executable with the module include paths and platform sources. Use the Makefile path for the current KAT runner.
-
 ## Test and KAT
 
-The commands below are written relative to the repository root, shown as `<repo-root>`. Generated KAT response files are written under the module build directory and are not part of the public API.
+The SHAKE KAT response files are local to this module under `platform/pc/test/kat/`.
 
 ```sh
-cd <repo-root>/PQC_Crypto/PQC_FRODOKEM/platform/pc
+cd platform/pc
 make test
 make kat_runtime
-mkdir -p kat
-./kat_runtime 640 kat/frodokem640.rsp
-./kat_runtime 976 kat/frodokem976.rsp
-./kat_runtime 1344 kat/frodokem1344.rsp
+./kat_runtime 640 test/kat/PQCkemKAT_19888_shake.rsp
+./kat_runtime 976 test/kat/PQCkemKAT_31296_shake.rsp
+./kat_runtime 1344 test/kat/PQCkemKAT_43088_shake.rsp
 ```
