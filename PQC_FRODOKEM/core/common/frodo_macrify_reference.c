@@ -20,11 +20,27 @@
 #endif    
 
 
+static int frodo_op_mul_add(uint16_t acc[8][8], uint16_t x[8][8], uint16_t y[8][8]) {
+    uint16_t z[8][8];
+
+    if (OP_matrix_mul_8x8(z, (const uint16_t (*)[8])x, (const uint16_t (*)[8])y,
+                          (uint16_t)PARAMS_Q) != OP_SUCCESS) {
+        return 0;
+    }
+
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            acc[i][j] = (uint16_t)(acc[i][j] + z[i][j]);
+        }
+    }
+    return 1;
+}
+
 int frodo_mul_add_as_plus_e(uint16_t *out, const uint16_t *s, const uint16_t *e, const uint8_t *seed_A) 
 { // Generate-and-multiply: generate matrix A (N x N) row-wise, multiply by s on the right.
   // Inputs: s, e (N x N_BAR)
   // Output: out = A*s + e (N x N_BAR)
-    int i, j, k;
+    int i, j;
     int16_t *A = calloc((size_t)PARAMS_N * PARAMS_N, sizeof(int16_t));
     if (A == NULL) {
         return 0;
@@ -64,16 +80,36 @@ int frodo_mul_add_as_plus_e(uint16_t *out, const uint16_t *s, const uint16_t *e,
     }
     memcpy(out, e, PARAMS_NBAR * PARAMS_N * sizeof(uint16_t));  
 
-    for (i = 0; i < PARAMS_N; i++) {                            // Matrix multiplication-addition A*s + e
-        for (k = 0; k < PARAMS_NBAR; k++) {
-            uint16_t sum = 0;
-            for (j = 0; j < PARAMS_N; j++) {                                
-                sum += A[i*PARAMS_N + j] * s[k*PARAMS_N + j];  
+    for (i = 0; i < PARAMS_N; i += 8) {                         // Matrix multiplication-addition A*s + e
+        uint16_t acc[8][8];
+        uint16_t x[8][8];
+        uint16_t y[8][8];
+
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                acc[r][c] = out[(i + r)*PARAMS_NBAR + c];
             }
-            out[i*PARAMS_NBAR + k] += sum;                      // Adding e. No need to reduce modulo 2^15, extra bits are taken care of during packing later on.
+        }
+
+        for (j = 0; j < PARAMS_N; j += 8) {
+            for (int r = 0; r < 8; r++) {
+                for (int c = 0; c < 8; c++) {
+                    x[r][c] = (uint16_t)A[(i + r)*PARAMS_N + (j + c)];
+                    y[r][c] = s[c*PARAMS_N + (j + r)];
+                }
+            }
+            if (!frodo_op_mul_add(acc, x, y)) {
+                free(A);
+                return 0;
+            }
+        }
+
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                out[(i + r)*PARAMS_NBAR + c] = acc[r][c];
+            }
         }
     }
-    
 #if defined(USE_AES128_FOR_A)
     AES128_free_schedule(aes_key_schedule);
 #endif
@@ -86,7 +122,7 @@ int frodo_mul_add_sa_plus_e(uint16_t *out, const uint16_t *s, uint16_t *e, const
 { // Generate-and-multiply: generate matrix A (N x N) column-wise, multiply by s' on the left.
   // Inputs: s', e' (N_BAR x N)
   // Output: out = s'*A + e' (N_BAR x N)
-    int i, j, k;
+    int i, j;
     int16_t *A = calloc((size_t)PARAMS_N * PARAMS_N, sizeof(int16_t));
     if (A == NULL) {
         return 0;
@@ -126,16 +162,36 @@ int frodo_mul_add_sa_plus_e(uint16_t *out, const uint16_t *s, uint16_t *e, const
     }
     memcpy(out, e, PARAMS_NBAR * PARAMS_N * sizeof(uint16_t));
 
-    for (i = 0; i < PARAMS_N; i++) {                            // Matrix multiplication-addition A*s + e
-        for (k = 0; k < PARAMS_NBAR; k++) {
-            uint16_t sum = 0;
-            for (j = 0; j < PARAMS_N; j++) {                                
-                sum += A[j*PARAMS_N + i] * s[k*PARAMS_N + j];  
+    for (i = 0; i < PARAMS_N; i += 8) {                         // Matrix multiplication-addition s'*A + e
+        uint16_t acc[8][8];
+        uint16_t x[8][8];
+        uint16_t y[8][8];
+
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                acc[r][c] = out[r*PARAMS_N + (i + c)];
             }
-            out[k*PARAMS_N + i] += sum;                         // Adding e. No need to reduce modulo 2^15, extra bits are taken care of during packing later on.
+        }
+
+        for (j = 0; j < PARAMS_N; j += 8) {
+            for (int r = 0; r < 8; r++) {
+                for (int c = 0; c < 8; c++) {
+                    x[r][c] = s[r*PARAMS_N + (j + c)];
+                    y[r][c] = (uint16_t)A[(j + r)*PARAMS_N + (i + c)];
+                }
+            }
+            if (!frodo_op_mul_add(acc, x, y)) {
+                free(A);
+                return 0;
+            }
+        }
+
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                out[r*PARAMS_N + (i + c)] = acc[r][c];
+            }
         }
     }
-    
 #if defined(USE_AES128_FOR_A)
     AES128_free_schedule(aes_key_schedule);
 #endif

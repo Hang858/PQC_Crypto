@@ -2,6 +2,61 @@
 #include "param.h"
 #include "operator_interface.h"
 #include <string.h>
+
+static void load_block_8x8(uint16_t dst[8][8], const uint16_t *src,
+						   int row, int col, int rows, int cols)
+{
+	for (int r = 0; r < 8; r++)
+	{
+		for (int c = 0; c < 8; c++)
+		{
+			if (row + r < rows && col + c < cols)
+			{
+				dst[r][c] = src[(row + r) * cols + col + c];
+			}
+			else
+			{
+				dst[r][c] = 0;
+			}
+		}
+	}
+}
+
+static void load_transposed_block_8x8(uint16_t dst[8][8], const uint16_t *src,
+									  int row, int col, int rows, int cols)
+{
+	for (int r = 0; r < 8; r++)
+	{
+		for (int c = 0; c < 8; c++)
+		{
+			if (row + c < rows && col + r < cols)
+			{
+				dst[r][c] = src[(row + c) * cols + col + r];
+			}
+			else
+			{
+				dst[r][c] = 0;
+			}
+		}
+	}
+}
+
+static void add_block_8x8(uint16_t *dst, const uint16_t src[8][8],
+						  int row, int col, int rows, int cols)
+{
+	for (int r = 0; r < 8; r++)
+	{
+		for (int c = 0; c < 8; c++)
+		{
+			if (row + r < rows && col + c < cols)
+			{
+				dst[(row + r) * cols + col + c] =
+					(uint16_t)(dst[(row + r) * cols + col + c] + src[r][c]);
+			}
+		}
+	}
+}
+
 void scloudplus_add(uint16_t *in0, uint16_t *in1, int len, uint16_t *out)
 {
 	for (int i = 0; i < len; i++)
@@ -23,47 +78,19 @@ void scloudplus_mul_cs(uint16_t *C, uint16_t *S, uint16_t *out)
 	uint16_t y[8][8];
 	uint16_t z[8][8];
 	memset(out, 0, SCLOUDPLUS_MBAR * SCLOUDPLUS_NBAR * 2);
-	for (int block = 0; block < SCLOUDPLUS_N; block += 8)
+	for (int i = 0; i < SCLOUDPLUS_MBAR; i += 8)
 	{
-		for (int i = 0; i < 8; i++)
+		for (int j = 0; j < SCLOUDPLUS_NBAR; j += 8)
 		{
-			for (int k = 0; k < 8; k++)
+			for (int k = 0; k < SCLOUDPLUS_N; k += 8)
 			{
-				x[i][k] = C[i * SCLOUDPLUS_N + block + k];
-				y[k][i] = S[i * SCLOUDPLUS_N + block + k];
-			}
-		}
-		if (OP_matrix_mul_8x8(z, (const uint16_t (*)[8])x, (const uint16_t (*)[8])y, 0) != OP_SUCCESS) {
-			return;
-		}
-		for (int i = 0; i < 8; i++)
-		{
-			for (int j = 0; j < 8; j++)
-			{
-				out[i * SCLOUDPLUS_NBAR + j] =
-					(uint16_t)(out[i * SCLOUDPLUS_NBAR + j] + z[i][j]);
-			}
-		}
-	}
-	for (int i = 0; i < 8; i++)
-	{
-		for (int j = 8; j < SCLOUDPLUS_NBAR; j++)
-		{
-			for (int k = 0; k < SCLOUDPLUS_N; k++)
-			{
-				out[i * SCLOUDPLUS_NBAR + j] +=
-					C[i * SCLOUDPLUS_N + k] * (uint16_t)S[j * SCLOUDPLUS_N + k];
-			}
-		}
-	}
-	for (int i = 8; i < SCLOUDPLUS_MBAR; i++)
-	{
-		for (int j = 0; j < SCLOUDPLUS_NBAR; j++)
-		{
-			for (int k = 0; k < SCLOUDPLUS_N; k++)
-			{
-				out[i * SCLOUDPLUS_NBAR + j] +=
-					C[i * SCLOUDPLUS_N + k] * (uint16_t)S[j * SCLOUDPLUS_N + k];
+				load_block_8x8(x, C, i, k, SCLOUDPLUS_MBAR, SCLOUDPLUS_N);
+				load_transposed_block_8x8(y, S, j, k, SCLOUDPLUS_NBAR, SCLOUDPLUS_N);
+				if (OP_matrix_mul_8x8(z, (const uint16_t (*)[8])x, (const uint16_t (*)[8])y, 0) != OP_SUCCESS) {
+					return;
+				}
+				add_block_8x8(out, (const uint16_t (*)[8])z, i, j,
+							  SCLOUDPLUS_MBAR, SCLOUDPLUS_NBAR);
 			}
 		}
 	}
@@ -75,47 +102,19 @@ void scloudplus_mul_add_sb_e(const uint16_t *S, const uint16_t *B,
 	uint16_t y[8][8];
 	uint16_t z[8][8];
 	memcpy(out, E, SCLOUDPLUS_MBAR * SCLOUDPLUS_NBAR * 2);
-	for (int block = 0; block < SCLOUDPLUS_M; block += 8)
+	for (int i = 0; i < SCLOUDPLUS_MBAR; i += 8)
 	{
-		for (int i = 0; i < 8; i++)
+		for (int j = 0; j < SCLOUDPLUS_NBAR; j += 8)
 		{
-			for (int k = 0; k < 8; k++)
+			for (int k = 0; k < SCLOUDPLUS_M; k += 8)
 			{
-				x[i][k] = S[i * SCLOUDPLUS_M + block + k];
-				y[k][i] = B[(block + k) * SCLOUDPLUS_NBAR + i];
-			}
-		}
-		if (OP_matrix_mul_8x8(z, (const uint16_t (*)[8])x, (const uint16_t (*)[8])y, 0) != OP_SUCCESS) {
-			return;
-		}
-		for (int i = 0; i < 8; i++)
-		{
-			for (int j = 0; j < 8; j++)
-			{
-				out[i * SCLOUDPLUS_NBAR + j] =
-					(uint16_t)(out[i * SCLOUDPLUS_NBAR + j] + z[i][j]);
-			}
-		}
-	}
-	for (int i = 0; i < 8; i++)
-	{
-		for (int j = 8; j < SCLOUDPLUS_NBAR; j++)
-		{
-			for (int k = 0; k < SCLOUDPLUS_M; k++)
-			{
-				out[i * SCLOUDPLUS_NBAR + j] +=
-					(uint16_t)S[i * SCLOUDPLUS_M + k] * B[k * SCLOUDPLUS_NBAR + j];
-			}
-		}
-	}
-	for (int i = 8; i < SCLOUDPLUS_MBAR; i++)
-	{
-		for (int j = 0; j < SCLOUDPLUS_NBAR; j++)
-		{
-			for (int k = 0; k < SCLOUDPLUS_M; k++)
-			{
-				out[i * SCLOUDPLUS_NBAR + j] +=
-					(uint16_t)S[i * SCLOUDPLUS_M + k] * B[k * SCLOUDPLUS_NBAR + j];
+				load_block_8x8(x, S, i, k, SCLOUDPLUS_MBAR, SCLOUDPLUS_M);
+				load_block_8x8(y, B, k, j, SCLOUDPLUS_M, SCLOUDPLUS_NBAR);
+				if (OP_matrix_mul_8x8(z, (const uint16_t (*)[8])x, (const uint16_t (*)[8])y, 0) != OP_SUCCESS) {
+					return;
+				}
+				add_block_8x8(out, (const uint16_t (*)[8])z, i, j,
+							  SCLOUDPLUS_MBAR, SCLOUDPLUS_NBAR);
 			}
 		}
 	}
