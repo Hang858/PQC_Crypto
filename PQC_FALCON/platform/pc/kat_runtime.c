@@ -6,45 +6,31 @@
 #include "api.h"
 #include "katrng.h"
 
-#define MAX_MARKER_LEN 50
+#define MAX_LINE_LEN 32768
 
-static int find_marker(FILE *infile, const char *marker) {
-    char line[MAX_MARKER_LEN];
-    int len = (int)strlen(marker);
-    int curr_line;
+#ifdef FALCON_KAT_DEBUG
+#define KAT_DBG(...) do { \
+        fprintf(stderr, __VA_ARGS__); \
+        fflush(stderr); \
+    } while (0)
+#else
+#define KAT_DBG(...) do { } while (0)
+#endif
 
-    if (len > MAX_MARKER_LEN - 1) {
-        len = MAX_MARKER_LEN - 1;
-    }
+static int read_prefixed_line(FILE *infile, char *line, size_t line_size, const char *prefix) {
+    size_t prefix_len = strlen(prefix);
 
-    for (int i = 0; i < len; i++) {
-        curr_line = fgetc(infile);
-        line[i] = (char)curr_line;
-        if (curr_line == EOF) {
-            return 0;
-        }
-    }
-    line[len] = '\0';
-
-    for (;;) {
-        if (!strncmp(line, marker, (size_t)len)) {
+    while (fgets(line, (int)line_size, infile) != NULL) {
+        if (strncmp(line, prefix, prefix_len) == 0) {
             return 1;
         }
-        for (int i = 0; i < len - 1; i++) {
-            line[i] = line[i + 1];
-        }
-        curr_line = fgetc(infile);
-        line[len - 1] = (char)curr_line;
-        if (curr_line == EOF) {
-            return 0;
-        }
-        line[len] = '\0';
     }
+    return 0;
 }
 
 static int read_hex(FILE *infile, unsigned char *a, int length, const char *str) {
-    int ch;
-    int started = 0;
+    char line[MAX_LINE_LEN];
+    const char *p;
     int pos = 0;
 
     if (length == 0) {
@@ -52,45 +38,49 @@ static int read_hex(FILE *infile, unsigned char *a, int length, const char *str)
         return 1;
     }
     memset(a, 0, (size_t)length);
-    if (!find_marker(infile, str)) {
+    if (!read_prefixed_line(infile, line, sizeof line, str)) {
         return 0;
     }
-    while ((ch = fgetc(infile)) != EOF) {
-        unsigned char ich;
-        if (!isxdigit(ch)) {
-            if (!started && ch == '\n') {
-                break;
-            }
-            if (started) {
-                break;
-            }
-            continue;
+    p = line + strlen(str);
+    while (*p != '\0' && *p != '\n' && *p != '\r') {
+        unsigned char hi;
+        unsigned char lo;
+        int ch;
+
+        while (*p != '\0' && isspace((unsigned char)*p)) {
+            p++;
         }
-        started = 1;
+        if (*p == '\0' || *p == '\n' || *p == '\r') {
+            break;
+        }
+        ch = (unsigned char)*p++;
         if (ch >= '0' && ch <= '9') {
-            ich = (unsigned char)(ch - '0');
+            hi = (unsigned char)(ch - '0');
         } else if (ch >= 'A' && ch <= 'F') {
-            ich = (unsigned char)(ch - 'A' + 10);
+            hi = (unsigned char)(ch - 'A' + 10);
+        } else if (ch >= 'a' && ch <= 'f') {
+            hi = (unsigned char)(ch - 'a' + 10);
         } else {
-            ich = (unsigned char)(ch - 'a' + 10);
+            return 0;
+        }
+        while (*p != '\0' && isspace((unsigned char)*p)) {
+            p++;
+        }
+        if (*p == '\0' || *p == '\n' || *p == '\r') {
+            return 0;
+        }
+        ch = (unsigned char)*p++;
+        if (ch >= '0' && ch <= '9') {
+            lo = (unsigned char)(ch - '0');
+        } else if (ch >= 'A' && ch <= 'F') {
+            lo = (unsigned char)(ch - 'A' + 10);
+        } else if (ch >= 'a' && ch <= 'f') {
+            lo = (unsigned char)(ch - 'a' + 10);
+        } else {
+            return 0;
         }
 
-        do {
-            ch = fgetc(infile);
-        } while (ch != EOF && !isxdigit(ch));
-        if (ch == EOF) {
-            return 0;
-        }
-        if (ch >= '0' && ch <= '9') {
-            ich = (unsigned char)((ich << 4) | (unsigned char)(ch - '0'));
-        } else if (ch >= 'A' && ch <= 'F') {
-            ich = (unsigned char)((ich << 4) | (unsigned char)(ch - 'A' + 10));
-        } else if (ch >= 'a' && ch <= 'f') {
-            ich = (unsigned char)((ich << 4) | (unsigned char)(ch - 'a' + 10));
-        } else {
-            return 0;
-        }
-        a[pos++] = ich;
+        a[pos++] = (unsigned char)((hi << 4) | lo);
         if (pos == length) {
             break;
         }
@@ -156,24 +146,35 @@ int main(int argc, char **argv) {
         unsigned char *pk;
         unsigned char *sk;
 
-        if (find_marker(req, "count = ")) {
-            if (fscanf(req, "%d", &count) != 1) {
+        {
+            char line[MAX_LINE_LEN];
+            if (!read_prefixed_line(req, line, sizeof line, "count = ")) {
+                done = 1;
+                break;
+            }
+            if (sscanf(line + 8, "%d", &count) != 1) {
                 return 2;
             }
-        } else {
-            done = 1;
-            break;
         }
         fprintf(rsp, "count = %d\n", count);
+        KAT_DBG("[kat] count=%d start\n", count);
 
         if (!read_hex(req, seed, 48, "seed = ")) {
             return 2;
         }
         fprint_bstr(rsp, "seed = ", seed, 48);
+        KAT_DBG("[kat] count=%d randombytes_init begin\n", count);
         randombytes_init(seed, NULL, 256);
+        KAT_DBG("[kat] count=%d randombytes_init end\n", count);
 
-        if (!find_marker(req, "mlen = ") || fscanf(req, "%llu", &mlen) != 1) {
-            return 2;
+        {
+            char line[MAX_LINE_LEN];
+            if (!read_prefixed_line(req, line, sizeof line, "mlen = ")) {
+                return 2;
+            }
+            if (sscanf(line + 7, "%llu", &mlen) != 1) {
+                return 2;
+            }
         }
         fprintf(rsp, "mlen = %llu\n", mlen);
 
@@ -191,23 +192,32 @@ int main(int argc, char **argv) {
         }
         fprint_bstr(rsp, "msg = ", m, mlen);
 
+        KAT_DBG("[kat] count=%d keypair begin\n", count);
         if (crypto_sign_keypair(level, pk, sk) != 0) {
+            KAT_DBG("[kat] count=%d keypair failed\n", count);
             return 1;
         }
+        KAT_DBG("[kat] count=%d keypair end\n", count);
         fprint_bstr(rsp, "pk = ", pk, params->publickeybytes);
         fprint_bstr(rsp, "sk = ", sk, params->secretkeybytes);
 
+        KAT_DBG("[kat] count=%d sign begin\n", count);
         if (crypto_sign(level, sm, &smlen, m, mlen, sk) != 0) {
+            KAT_DBG("[kat] count=%d sign failed\n", count);
             return 1;
         }
+        KAT_DBG("[kat] count=%d sign end smlen=%llu\n", count, smlen);
         fprintf(rsp, "smlen = %llu\n", smlen);
         fprint_bstr(rsp, "sm = ", sm, smlen);
         fprintf(rsp, "\n");
 
+        KAT_DBG("[kat] count=%d open begin\n", count);
         if (crypto_sign_open(level, m1, &mlen1, sm, smlen, pk) != 0 ||
             mlen1 != mlen || memcmp(m, m1, (size_t)mlen) != 0) {
+            KAT_DBG("[kat] count=%d open failed\n", count);
             return 1;
         }
+        KAT_DBG("[kat] count=%d open end\n", count);
 
         free(m);
         free(m1);
@@ -216,6 +226,7 @@ int main(int argc, char **argv) {
         free(sk);
     } while (!done);
 
+    KAT_DBG("[kat] done\n");
     fclose(req);
     fclose(rsp);
     return 0;

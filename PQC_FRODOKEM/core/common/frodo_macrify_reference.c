@@ -8,16 +8,7 @@
 #include <string.h>
 #include "frodo_macrify.h"
 #include "operator_interface.h"
-
-#if defined(USE_AES128_FOR_A)
-#if !defined(USE_OPENSSL)
-    #include "../../common/aes/aes.h"
-#else
-    #include "../../common/aes/aes_openssl.h"
-#endif
-#elif defined (USE_SHAKE128_FOR_A)
-    #include "fips202.h"
-#endif    
+#include "fips202.h"
 
 
 static int frodo_op_mul_add(uint16_t acc[8][8], uint16_t x[8][8], uint16_t y[8][8]) {
@@ -46,35 +37,16 @@ int frodo_mul_add_as_plus_e(uint16_t *out, const uint16_t *s, const uint16_t *e,
         return 0;
     }
        
-#if defined(USE_AES128_FOR_A)    // Matrix A generation using AES128, done per 128-bit block                                          
-    size_t A_len = PARAMS_N * PARAMS_N * sizeof(int16_t);    
-    for (i = 0; i < PARAMS_N; i++) {                        
-        for (j = 0; j < PARAMS_N; j += PARAMS_STRIPE_STEP) {
-            A[i*PARAMS_N + j] = UINT16_TO_LE(i);                // Loading values in the little-endian order
-            A[i*PARAMS_N + j + 1] = UINT16_TO_LE(j);
-        }
-    }
-    
-#if !defined(USE_OPENSSL)
-    uint8_t aes_key_schedule[16*11];
-    AES128_load_schedule(seed_A, aes_key_schedule);  
-    AES128_ECB_enc_sch((uint8_t*)A, A_len, aes_key_schedule, (uint8_t*)A);
-#else
-    EVP_CIPHER_CTX *aes_key_schedule;    
-    int len;
-    if (!(aes_key_schedule = EVP_CIPHER_CTX_new())) handleErrors();    
-    if (1 != EVP_EncryptInit_ex(aes_key_schedule, EVP_aes_128_ecb(), NULL, seed_A, NULL)) handleErrors();    
-    if (1 != EVP_EncryptUpdate(aes_key_schedule, (uint8_t*)A, &len, (uint8_t*)A, A_len)) handleErrors();
-#endif
-#elif defined(USE_SHAKE128_FOR_A)  // Matrix A generation using SHAKE128, done per 16*N-bit row   
+    // Matrix A generation using SHAKE128, done per 16*N-bit row.
     uint8_t seed_A_separated[2 + BYTES_SEED_A];
-    uint16_t* seed_A_origin = (uint16_t*)&seed_A_separated;
     memcpy(&seed_A_separated[2], seed_A, BYTES_SEED_A);
     for (i = 0; i < PARAMS_N; i++) {
-        seed_A_origin[0] = UINT16_TO_LE((uint16_t) i);
+        uint16_t row = UINT16_TO_LE((uint16_t)i);
+
+        memcpy(seed_A_separated, &row, sizeof row);
         shake128((unsigned char*)(A + i*PARAMS_N), (unsigned long long)(2*PARAMS_N), seed_A_separated, 2 + BYTES_SEED_A);
     }
-#endif    
+
     for (i = 0; i < PARAMS_N * PARAMS_N; i++) {
         A[i] = LE_TO_UINT16(A[i]);
     }
@@ -110,9 +82,6 @@ int frodo_mul_add_as_plus_e(uint16_t *out, const uint16_t *s, const uint16_t *e,
             }
         }
     }
-#if defined(USE_AES128_FOR_A)
-    AES128_free_schedule(aes_key_schedule);
-#endif
     free(A);
     return 1;
 }
@@ -128,35 +97,16 @@ int frodo_mul_add_sa_plus_e(uint16_t *out, const uint16_t *s, uint16_t *e, const
         return 0;
     }
     
-#if defined(USE_AES128_FOR_A)    // Matrix A generation using AES128, done per 128-bit block                                       
-    size_t A_len = PARAMS_N * PARAMS_N * sizeof(int16_t);      
-    for (i = 0; i < PARAMS_N; i++) {                        
-        for (j = 0; j < PARAMS_N; j += PARAMS_STRIPE_STEP) {
-            A[i*PARAMS_N + j] = UINT16_TO_LE(i);                // Loading values in the little-endian order
-            A[i*PARAMS_N + j + 1] = UINT16_TO_LE(j);
-        }
-    }
-    
-#if !defined(USE_OPENSSL)
-    uint8_t aes_key_schedule[16*11];
-    AES128_load_schedule(seed_A, aes_key_schedule);  
-    AES128_ECB_enc_sch((uint8_t*)A, A_len, aes_key_schedule, (uint8_t*)A);
-#else
-    EVP_CIPHER_CTX *aes_key_schedule;    
-    int len;
-    if (!(aes_key_schedule = EVP_CIPHER_CTX_new())) handleErrors();    
-    if (1 != EVP_EncryptInit_ex(aes_key_schedule, EVP_aes_128_ecb(), NULL, seed_A, NULL)) handleErrors();    
-    if (1 != EVP_EncryptUpdate(aes_key_schedule, (uint8_t*)A, &len, (uint8_t*)A, A_len)) handleErrors();
-#endif
-#elif defined (USE_SHAKE128_FOR_A)  // Matrix A generation using SHAKE128, done per 16*N-bit row
+    // Matrix A generation using SHAKE128, done per 16*N-bit row.
     uint8_t seed_A_separated[2 + BYTES_SEED_A];
-    uint16_t* seed_A_origin = (uint16_t*)&seed_A_separated;
     memcpy(&seed_A_separated[2], seed_A, BYTES_SEED_A);
     for (i = 0; i < PARAMS_N; i++) {
-        seed_A_origin[0] = UINT16_TO_LE((uint16_t) i);
+        uint16_t row = UINT16_TO_LE((uint16_t)i);
+
+        memcpy(seed_A_separated, &row, sizeof row);
         shake128((unsigned char*)(A + i*PARAMS_N), (unsigned long long)(2*PARAMS_N), seed_A_separated, 2 + BYTES_SEED_A);
     }
-#endif
+
     for (i = 0; i < PARAMS_N * PARAMS_N; i++) {
         A[i] = LE_TO_UINT16(A[i]);
     }
@@ -192,9 +142,6 @@ int frodo_mul_add_sa_plus_e(uint16_t *out, const uint16_t *s, uint16_t *e, const
             }
         }
     }
-#if defined(USE_AES128_FOR_A)
-    AES128_free_schedule(aes_key_schedule);
-#endif
     free(A);
     return 1;
 }

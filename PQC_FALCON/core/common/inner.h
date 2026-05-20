@@ -92,87 +92,16 @@
 #define Zf__(prefix, name)   prefix ## _ ## name  
 
 
-/*
- * Some computations with floating-point elements, in particular
- * rounding to the nearest integer, rely on operations using _exactly_
- * the precision of IEEE-754 binary64 type (i.e. 52 bits). On 32-bit
- * x86, the 387 FPU may be used (depending on the target OS) and, in
- * that case, may use more precision bits (i.e. 64 bits, for an 80-bit
- * total type length); to prevent miscomputations, we define an explicit
- * function that modifies the precision in the FPU control word.
- *
- * set_fpu_cw() sets the precision to the provided value, and returns
- * the previously set precision; callers are supposed to restore the
- * previous precision on exit. The correct (52-bit) precision is
- * configured with the value "2". On unsupported compilers, or on
- * targets other than 32-bit x86, or when the native 'double' type is
- * not used, the set_fpu_cw() function does nothing at all.
- */
-#if defined __GNUC__ && defined __i386__
-static inline unsigned
-set_fpu_cw(unsigned x)
-{
-	unsigned short t;
-	unsigned old;
-
-	__asm__ __volatile__ ("fstcw %0" : "=m" (t) : : );
-	old = (t & 0x0300u) >> 8;
-	t = (unsigned short)((t & ~0x0300u) | (x << 8));
-	__asm__ __volatile__ ("fldcw %0" : : "m" (t) : );
-	return old;
-}
-#elif defined _M_IX86
-static inline unsigned
-set_fpu_cw(unsigned x)
-{
-	unsigned short t;
-	unsigned old;
-
-	__asm { fstcw t }
-	old = (t & 0x0300u) >> 8;
-	t = (unsigned short)((t & ~0x0300u) | (x << 8));
-	__asm { fldcw t }
-	return old;
-}
-#else
 static inline unsigned
 set_fpu_cw(unsigned x)
 {
 	return x;
 }
-#endif
 
 /*
- * If using the native 'double' type but not AVX2 code, on an x86
- * machine with SSE2 activated for maths, then we will use the
- * SSE2 intrinsics.
+ * This project uses the C99 'restrict' keyword directly. No
+ * compiler-specific fallback is kept in the pure C build.
  */
-#if defined __GNUC__ && defined __SSE2_MATH__
-#include <immintrin.h>
-#endif
-
-/*
- * For optimal reproducibility of values, we need to disable contraction
- * of floating-point expressions; otherwise, on some architectures (e.g.
- * PowerPC), the compiler may generate fused-multiply-add opcodes that
- * may round differently than two successive separate opcodes. C99 defines
- * a standard pragma for that, but GCC-6.2.2 appears to ignore it,
- * hence the GCC-specific pragma (that Clang does not support).
- */
-#if defined __clang__
-#pragma STDC FP_CONTRACT OFF
-#elif defined __GNUC__
-#pragma GCC optimize ("fp-contract=off")
-#endif
-
-/*
- * MSVC 2015 does not know the C99 keyword 'restrict'.
- */
-#if defined _MSC_VER && _MSC_VER
-#ifndef restrict
-#define restrict   __restrict
-#endif
-#endif
 
 /* ==================================================================== */
 /*

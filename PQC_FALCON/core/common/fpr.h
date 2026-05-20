@@ -32,19 +32,12 @@
 
 /* ====================================================================== */
 
-#include <math.h>
 #include "operator_interface.h"
 
-/*
- * We wrap the native 'double' type into a structure so that the C compiler
- * complains if we inadvertently use raw arithmetic operators on the 'fpr'
- * type instead of using the inline functions below. This should have no
- * extra runtime cost, since all the functions below are 'inline'.
- */
-typedef struct { double v; } fpr;
+typedef struct { op_fpr_t v; } fpr;
 
 static inline fpr
-FPR(double v)
+FPR(op_fpr_t v)
 {
 	fpr x;
 
@@ -55,53 +48,83 @@ FPR(double v)
 static inline fpr
 fpr_of(int64_t i)
 {
-	return FPR((double)i);
+	return FPR((op_fpr_t)i);
 }
 
-static const fpr fpr_q = { 12289.0 };
-static const fpr fpr_inverse_of_q = { 1.0 / 12289.0 };
-static const fpr fpr_inv_2sqrsigma0 = { .150865048875372721532312163019 };
+static const fpr fpr_q = { (op_fpr_t)12289.0 };
+static const fpr fpr_inverse_of_q = { (op_fpr_t)(1.0 / 12289.0) };
+static const fpr fpr_inv_2sqrsigma0 = { (op_fpr_t).150865048875372721532312163019 };
 static const fpr fpr_inv_sigma[] = {
-	{ 0.0 }, /* unused */
-	{ 0.0069054793295940891952143765991630516 },
-	{ 0.0068102267767177975961393730687908629 },
-	{ 0.0067188101910722710707826117910434131 },
-	{ 0.0065883354370073665545865037227681924 },
-	{ 0.0064651781207602900738053897763485516 },
-	{ 0.0063486788828078995327741182928037856 },
-	{ 0.0062382586529084374473367528433697537 },
-	{ 0.0061334065020930261548984001431770281 },
-	{ 0.0060336696681577241031668062510953022 },
-	{ 0.0059386453095331159950250124336477482 }
+	{ (op_fpr_t)0.0 }, /* unused */
+	{ (op_fpr_t)0.0069054793295940891952143765991630516 },
+	{ (op_fpr_t)0.0068102267767177975961393730687908629 },
+	{ (op_fpr_t)0.0067188101910722710707826117910434131 },
+	{ (op_fpr_t)0.0065883354370073665545865037227681924 },
+	{ (op_fpr_t)0.0064651781207602900738053897763485516 },
+	{ (op_fpr_t)0.0063486788828078995327741182928037856 },
+	{ (op_fpr_t)0.0062382586529084374473367528433697537 },
+	{ (op_fpr_t)0.0061334065020930261548984001431770281 },
+	{ (op_fpr_t)0.0060336696681577241031668062510953022 },
+	{ (op_fpr_t)0.0059386453095331159950250124336477482 }
 };
 static const fpr fpr_sigma_min[] = {
-	{ 0.0 }, /* unused */
-	{ 1.1165085072329102588881898380334015 },
-	{ 1.1321247692325272405718031785357108 },
-	{ 1.1475285353733668684571123112513188 },
-	{ 1.1702540788534828939713084716509250 },
-	{ 1.1925466358390344011122170489094133 },
-	{ 1.2144300507766139921088487776957699 },
-	{ 1.2359260567719808790104525941706723 },
-	{ 1.2570545284063214162779743112075080 },
-	{ 1.2778336969128335860256340575729042 },
-	{ 1.2982803343442918539708792538826807 }
+	{ (op_fpr_t)0.0 }, /* unused */
+	{ (op_fpr_t)1.1165085072329102588881898380334015 },
+	{ (op_fpr_t)1.1321247692325272405718031785357108 },
+	{ (op_fpr_t)1.1475285353733668684571123112513188 },
+	{ (op_fpr_t)1.1702540788534828939713084716509250 },
+	{ (op_fpr_t)1.1925466358390344011122170489094133 },
+	{ (op_fpr_t)1.2144300507766139921088487776957699 },
+	{ (op_fpr_t)1.2359260567719808790104525941706723 },
+	{ (op_fpr_t)1.2570545284063214162779743112075080 },
+	{ (op_fpr_t)1.2778336969128335860256340575729042 },
+	{ (op_fpr_t)1.2982803343442918539708792538826807 }
 };
-static const fpr fpr_log2 = { 0.69314718055994530941723212146 };
-static const fpr fpr_inv_log2 = { 1.4426950408889634073599246810 };
-static const fpr fpr_bnorm_max = { 16822.4121 };
-static const fpr fpr_zero = { 0.0 };
-static const fpr fpr_one = { 1.0 };
-static const fpr fpr_two = { 2.0 };
-static const fpr fpr_onehalf = { 0.5 };
-static const fpr fpr_invsqrt2 = { 0.707106781186547524400844362105 };
-static const fpr fpr_invsqrt8 = { 0.353553390593273762200422181052 };
-static const fpr fpr_ptwo31 = { 2147483648.0 };
-static const fpr fpr_ptwo31m1 = { 2147483647.0 };
-static const fpr fpr_mtwo31m1 = { -2147483647.0 };
-static const fpr fpr_ptwo63m1 = { 9223372036854775807.0 };
-static const fpr fpr_mtwo63m1 = { -9223372036854775807.0 };
-static const fpr fpr_ptwo63 = { 9223372036854775808.0 };
+static const fpr fpr_log2 = { (op_fpr_t)0.69314718055994530941723212146 };
+static const fpr fpr_inv_log2 = { (op_fpr_t)1.4426950408889634073599246810 };
+static const fpr fpr_bnorm_max = { (op_fpr_t)16822.4121 };
+static const fpr fpr_zero = { (op_fpr_t)0.0 };
+static const fpr fpr_one = { (op_fpr_t)1.0 };
+static const fpr fpr_two = { (op_fpr_t)2.0 };
+static const fpr fpr_onehalf = { (op_fpr_t)0.5 };
+static const fpr fpr_invsqrt2 = { (op_fpr_t)0.707106781186547524400844362105 };
+static const fpr fpr_invsqrt8 = { (op_fpr_t)0.353553390593273762200422181052 };
+static const fpr fpr_ptwo31 = { (op_fpr_t)2147483648.0 };
+static const fpr fpr_ptwo31m1 = { (op_fpr_t)2147483647.0 };
+static const fpr fpr_mtwo31m1 = { (op_fpr_t)-2147483647.0 };
+static const fpr fpr_ptwo63m1 = { (op_fpr_t)9223372036854775807.0 };
+static const fpr fpr_mtwo63m1 = { (op_fpr_t)-9223372036854775807.0 };
+static const fpr fpr_ptwo63 = { (op_fpr_t)9223372036854775808.0 };
+
+static inline int
+fpr_op_add(op_fpr_t a, op_fpr_t b, op_fpr_t *out)
+{
+	return OP_fpr_add(a, b, out);
+}
+
+static inline int
+fpr_op_sub(op_fpr_t a, op_fpr_t b, op_fpr_t *out)
+{
+	return OP_fpr_sub(a, b, out);
+}
+
+static inline int
+fpr_op_mul(op_fpr_t a, op_fpr_t b, op_fpr_t *out)
+{
+	return OP_fpr_mul(a, b, out);
+}
+
+static inline int
+fpr_op_div(op_fpr_t a, op_fpr_t b, op_fpr_t *out)
+{
+	return OP_fpr_div(a, b, out);
+}
+
+static inline int
+fpr_op_lt(op_fpr_t a, op_fpr_t b, uint8_t *out)
+{
+	return OP_fpr_lt(a, b, out);
+}
 
 static inline int64_t
 fpr_rint(fpr x)
@@ -123,10 +146,25 @@ fpr_rint(fpr x)
 	int64_t sx, tx, rp, rn, m;
 	uint32_t ub;
 
-	sx = (int64_t)(x.v - 1.0);
+	{
+		op_fpr_t t;
+
+		OP_fpr_sub(x.v, (op_fpr_t)1.0, &t);
+		sx = (int64_t)t;
+	}
 	tx = (int64_t)x.v;
-	rp = (int64_t)(x.v + 4503599627370496.0) - 4503599627370496;
-	rn = (int64_t)(x.v - 4503599627370496.0) + 4503599627370496;
+	{
+		op_fpr_t t;
+
+		OP_fpr_add(x.v, (op_fpr_t)4503599627370496.0, &t);
+		rp = (int64_t)t - 4503599627370496;
+	}
+	{
+		op_fpr_t t;
+
+		OP_fpr_sub(x.v, (op_fpr_t)4503599627370496.0, &t);
+		rn = (int64_t)t + 4503599627370496;
+	}
 
 	/*
 	 * If tx >= 2^52 or tx < -2^52, then result is tx.
@@ -179,7 +217,11 @@ fpr_floor(fpr x)
 	 * itself is not constant-time, making the point moot).
 	 */
 	r = (int64_t)x.v;
-	return r - (x.v < (double)r);
+	{
+		uint8_t z;
+		OP_fpr_lt(x.v, (op_fpr_t)r, &z);
+		return r - (int64_t)z;
+	}
 }
 
 static inline int64_t
@@ -193,9 +235,7 @@ fpr_add(fpr x, fpr y)
 {
 	op_fpr_t z;
 
-	if (OP_fpr_add(x.v, y.v, &z) != OP_SUCCESS) {
-		z = x.v + y.v;
-	}
+	OP_fpr_add(x.v, y.v, &z);
 	return FPR(z);
 }
 
@@ -204,28 +244,35 @@ fpr_sub(fpr x, fpr y)
 {
 	op_fpr_t z;
 
-	if (OP_fpr_sub(x.v, y.v, &z) != OP_SUCCESS) {
-		z = x.v - y.v;
-	}
+	OP_fpr_sub(x.v, y.v, &z);
 	return FPR(z);
 }
 
 static inline fpr
 fpr_neg(fpr x)
 {
-	return FPR(-x.v);
+	op_fpr_t z;
+
+	OP_fpr_sub((op_fpr_t)-0.0, x.v, &z);
+	return FPR(z);
 }
 
 static inline fpr
 fpr_half(fpr x)
 {
-	return FPR(x.v * 0.5);
+	op_fpr_t z;
+
+	OP_fpr_mul(x.v, fpr_onehalf.v, &z);
+	return FPR(z);
 }
 
 static inline fpr
 fpr_double(fpr x)
 {
-	return FPR(x.v + x.v);
+	op_fpr_t z;
+
+	OP_fpr_add(x.v, x.v, &z);
+	return FPR(z);
 }
 
 static inline fpr
@@ -233,9 +280,7 @@ fpr_mul(fpr x, fpr y)
 {
 	op_fpr_t z;
 
-	if (OP_fpr_mul(x.v, y.v, &z) != OP_SUCCESS) {
-		z = x.v * y.v;
-	}
+	OP_fpr_mul(x.v, y.v, &z);
 	return FPR(z);
 }
 
@@ -250,9 +295,7 @@ fpr_inv(fpr x)
 {
 	op_fpr_t z;
 
-	if (OP_fpr_div(1.0, x.v, &z) != OP_SUCCESS) {
-		z = 1.0 / x.v;
-	}
+	OP_fpr_div(fpr_one.v, x.v, &z);
 	return FPR(z);
 }
 
@@ -261,9 +304,7 @@ fpr_div(fpr x, fpr y)
 {
 	op_fpr_t z;
 
-	if (OP_fpr_div(x.v, y.v, &z) != OP_SUCCESS) {
-		z = x.v / y.v;
-	}
+	OP_fpr_div(x.v, y.v, &z);
 	return FPR(z);
 }
 
@@ -273,9 +314,7 @@ fpr_sqrt(fpr x)
 {
 	op_fpr_t z;
 
-	if (OP_fpr_sqrt(x.v, &z) != OP_SUCCESS) {
-		z = sqrt(x.v);
-	}
+	OP_fpr_sqrt(x.v, &z);
 	return FPR(z);
 }
 
@@ -284,9 +323,7 @@ fpr_lt(fpr x, fpr y)
 {
 	uint8_t z;
 
-	if (OP_fpr_lt(x.v, y.v, &z) != OP_SUCCESS) {
-		return x.v < y.v;
-	}
+	OP_fpr_lt(x.v, y.v, &z);
 	return (int)z;
 }
 
@@ -310,25 +347,37 @@ fpr_expm_p63(fpr x, fpr ccs)
 	 * the number of operations.
 	 */
 
-	double d, y;
+	{
+		op_fpr_t t, y;
 
-	d = x.v;
-	y = 0.000000002073772366009083061987;
-	y = 0.000000025299506379442070029551 - y * d;
-	y = 0.000000275607356160477811864927 - y * d;
-	y = 0.000002755586350219122514855659 - y * d;
-	y = 0.000024801566833585381209939524 - y * d;
-	y = 0.000198412739277311890541063977 - y * d;
-	y = 0.001388888894063186997887560103 - y * d;
-	y = 0.008333333327800835146903501993 - y * d;
-	y = 0.041666666666110491190622155955 - y * d;
-	y = 0.166666666666984014666397229121 - y * d;
-	y = 0.500000000000019206858326015208 - y * d;
-	y = 0.999999999999994892974086724280 - y * d;
-	y = 1.000000000000000000000000000000 - y * d;
-	y *= ccs.v;
-	return (uint64_t)(y * fpr_ptwo63.v);
-
+		OP_fpr_mul((op_fpr_t)0.000000002073772366009083061987, x.v, &y);
+		OP_fpr_sub((op_fpr_t)0.000000025299506379442070029551, y, &y);
+		OP_fpr_mul(y, x.v, &y);
+		OP_fpr_sub((op_fpr_t)0.000000275607356160477811864927, y, &y);
+		OP_fpr_mul(y, x.v, &y);
+		OP_fpr_sub((op_fpr_t)0.000002755586350219122514855659, y, &y);
+		OP_fpr_mul(y, x.v, &y);
+		OP_fpr_sub((op_fpr_t)0.000024801566833585381209939524, y, &y);
+		OP_fpr_mul(y, x.v, &y);
+		OP_fpr_sub((op_fpr_t)0.000198412739277311890541063977, y, &y);
+		OP_fpr_mul(y, x.v, &y);
+		OP_fpr_sub((op_fpr_t)0.001388888894063186997887560103, y, &y);
+		OP_fpr_mul(y, x.v, &y);
+		OP_fpr_sub((op_fpr_t)0.008333333327800835146903501993, y, &y);
+		OP_fpr_mul(y, x.v, &y);
+		OP_fpr_sub((op_fpr_t)0.041666666666110491190622155955, y, &y);
+		OP_fpr_mul(y, x.v, &y);
+		OP_fpr_sub((op_fpr_t)0.166666666666984014666397229121, y, &y);
+		OP_fpr_mul(y, x.v, &y);
+		OP_fpr_sub((op_fpr_t)0.500000000000019206858326015208, y, &y);
+		OP_fpr_mul(y, x.v, &y);
+		OP_fpr_sub((op_fpr_t)0.999999999999994892974086724280, y, &y);
+		OP_fpr_mul(y, x.v, &y);
+		OP_fpr_sub((op_fpr_t)1.000000000000000000000000000000, y, &y);
+		OP_fpr_mul(y, ccs.v, &y);
+		OP_fpr_mul(y, fpr_ptwo63.v, &t);
+		return (uint64_t)t;
+	}
 }
 
 #define fpr_gm_tab   Zf(fpr_gm_tab)

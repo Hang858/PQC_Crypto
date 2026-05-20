@@ -4,18 +4,14 @@
 //  Created by Bassham, Lawrence E (Fed) on 8/29/17.
 //  Copyright © 2017 Bassham, Lawrence E (Fed). All rights reserved.
 //
-//  Modified to use OpenSSL's AES256_ECB or a standalone implementation
+//  Modified to use a standalone AES256_ECB implementation.
 
 #ifndef rng_h
 #define rng_h
 
 #include <stdio.h>
 #include "config.h"
-#if !defined(USE_OPENSSL)
-    #include "aes.h"
-#else
-    #include "../../common/aes/aes_openssl.h"
-#endif
+#include "aes.h"
 
 #define RNG_SUCCESS      0
 #define RNG_BAD_MAXLEN  -1
@@ -23,27 +19,10 @@
 #define RNG_BAD_REQ_LEN -3
 
 static __inline void AES256_ECB(unsigned char *key, unsigned char *ctr, unsigned char *buffer) {
-#if !defined(USE_OPENSSL)
     uint8_t schedule[16*15];
     AES256_load_schedule(key, schedule);
     AES256_ECB_enc_sch(ctr, 16, schedule, buffer);
     AES256_free_schedule(schedule);
-#else
-    EVP_CIPHER_CTX *ctx;    
-    int len; 
-    
-    /* Create and initialise the context */
-    if(!(ctx = EVP_CIPHER_CTX_new())) handleErrors();
-    
-    if(1 != EVP_EncryptInit_ex(ctx, EVP_aes_256_ecb(), NULL, key, NULL))
-        handleErrors();
-    
-    if(1 != EVP_EncryptUpdate(ctx, buffer, &len, ctr, 16))
-        handleErrors();
-    
-    /* Clean up */
-    EVP_CIPHER_CTX_free(ctx);
-#endif    
 }
 
 typedef struct {

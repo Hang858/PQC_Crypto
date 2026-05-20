@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory is a self-contained FrodoKEM module for the unified PQC layout. It supports runtime selection among FrodoKEM-640, FrodoKEM-976, and FrodoKEM-1344.
+This directory is a self-contained FrodoKEM module for the unified PQC layout. It is built as a single portable reference path with no external crypto library dependency and no platform-specific branch selection.
 
 ## Directory Layout
 
@@ -105,15 +105,14 @@ Build variables:
 
 - `CC`: C compiler, default `gcc`.
 - `AR`: static library archiver, default `ar`.
-- `BASE_CFLAGS`: warning, optimization, C standard, platform, and include flags.
+- `BASE_CFLAGS`: warning, optimization, C standard, and include flags.
 
 Important definitions:
 
-- `NIX`: Unix-like build path.
-- `_AMD64_`: AMD64 build path.
-- `_REFERENCE_`: reference implementation.
-- `_SHAKE128_FOR_A_`: SHAKE128 for matrix A generation.
-- `USE_HARDWARE_HASH`: routes SHAKE/SHA3 through the operator interface.
+- FrodoKEM is built only as the portable reference implementation.
+- Matrix A generation uses SHAKE128.
+- `USE_HARDWARE_HASH`: routes SHAKE/SHA3 through the local operator interface.
+- No OpenSSL or OS-specific backend is required for the PC build.
 
 Outputs:
 
@@ -141,3 +140,9 @@ make kat_runtime
 ./kat_runtime 976 test/kat/PQCkemKAT_31296_shake.rsp
 ./kat_runtime 1344 test/kat/PQCkemKAT_43088_shake.rsp
 ```
+
+## Dependency Model
+
+- `core/common/config.h` is fixed to the reference configuration.
+- `platform/pc/soft/` provides the local software operator implementations.
+- The build is intended to stay cross-platform C only, without platform/OS-specific branches in the algorithm core.

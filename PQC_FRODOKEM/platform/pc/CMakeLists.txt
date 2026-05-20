@@ -30,9 +30,6 @@ set(FRODOKEM_COMMON_SOURCES
 add_library(pqc_frodokem STATIC ${FRODOKEM_COMMON_SOURCES})
 
 target_compile_definitions(pqc_frodokem PRIVATE
-    _AMD64_
-    _REFERENCE_
-    _SHAKE128_FOR_A_
     USE_HARDWARE_HASH
 )
 

@@ -1,11 +1,47 @@
-#include <math.h>
-#include <stdint.h>
-
-#if defined __GNUC__ && defined __SSE2_MATH__
-#include <emmintrin.h>
-#endif
-
 #include "operator_interface.h"
+
+static op_fpr_t
+op_fpr_sqrt_impl(op_fpr_t a)
+{
+	union {
+		op_fpr_t d;
+		uint64_t u;
+	} x, y;
+	uint64_t bits;
+	int exp;
+	int shift;
+	int odd;
+	int i;
+
+	x.d = a;
+	if (a <= (op_fpr_t)0.0) {
+		return (op_fpr_t)0.0;
+	}
+
+	bits = x.u;
+	exp = (int)((bits >> 52) & 0x7FFu);
+	if (exp == 0) {
+		shift = 0;
+		while ((bits & 0x7FF0000000000000u) == 0 && shift < 54) {
+			bits <<= 1;
+			shift ++;
+		}
+		x.u = bits;
+		exp = (int)((bits >> 52) & 0x7FFu) - shift;
+	}
+
+	odd = exp & 1;
+	exp = (exp >> 1) + 1023;
+	y.u = (uint64_t)exp << 52;
+	if (odd != 0) {
+		y.d *= (op_fpr_t)1.41421356237309504880;
+	}
+
+	for (i = 0; i < 8; ++i) {
+		y.d = (op_fpr_t)0.5 * (y.d + a / y.d);
+	}
+	return y.d;
+}
 
 int
 OP_fpr_add(op_fpr_t a, op_fpr_t b, op_fpr_t *out)
@@ -53,33 +89,7 @@ OP_fpr_sqrt(op_fpr_t a, op_fpr_t *out)
 	if (out == 0) {
 		return OP_FAILURE;
 	}
-
-#if defined __GNUC__ && defined __SSE2_MATH__
-	*out = _mm_cvtsd_f64(_mm_sqrt_pd(_mm_set1_pd(a)));
-#elif defined __GNUC__ && defined __i386__
-	__asm__ __volatile__ (
-		"fldl   %0\n\t"
-		"fsqrt\n\t"
-		"fstpl  %0\n\t"
-		: "+m" (a) : : );
-	*out = a;
-#elif defined __PPC__ && defined __GNUC__
-#if defined __clang__
-	__asm__ ( "fsqrt  %0, %1" : "=f" (*out) : "f" (a) : );
-#else
-	__asm__ ( "fsqrt  %0, %1" : "=d" (*out) : "d" (a) : );
-#endif
-#elif (defined __ARM_FP && ((__ARM_FP & 0x08) == 0x08)) \
-	|| (!defined __ARM_FP && defined __ARM_VFPV2__)
-#if defined __aarch64__ && __aarch64__
-	__asm__ ( "fsqrt   %d0, %d0" : "+w" (a) : : );
-#else
-	__asm__ ( "fsqrtd  %P0, %P0" : "+w" (a) : : );
-#endif
-	*out = a;
-#else
-	*out = sqrt(a);
-#endif
+	*out = op_fpr_sqrt_impl(a);
 	return OP_SUCCESS;
 }
 

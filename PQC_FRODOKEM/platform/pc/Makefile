@@ -7,7 +7,7 @@ CORE_PATH = $(PROJECT_PATH)/core
 COMMON_PATH = $(CORE_PATH)/common
 TEST_PATH = test
 
-BASE_CFLAGS = -O3 -Wall -Wextra -Wpedantic -std=c99 -DNIX -D_AMD64_ -D_REFERENCE_ -D_SHAKE128_FOR_A_ -DUSE_HARDWARE_HASH \
+BASE_CFLAGS = -O3 -Wall -Wextra -Wpedantic -std=c99 -DUSE_HARDWARE_HASH \
 	-I$(INCLUDE_PATH) -I$(CORE_PATH) -I$(COMMON_PATH) \
 	-I. -Isoft -I$(TEST_PATH)
 
