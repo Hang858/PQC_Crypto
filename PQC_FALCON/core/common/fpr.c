@@ -34,11 +34,6 @@
 
 #include "inner.h"
 
-#if defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmissing-braces"
-#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-#endif
 
 const fpr fpr_gm_tab[] = {
 	{0}, {0}, /* unused */
@@ -1081,6 +1076,3 @@ const fpr fpr_p2_tab[] = {
 	{ 0.00195312500 }
 };
 
-#if defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif
