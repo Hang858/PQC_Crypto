@@ -101,7 +101,9 @@ void scloudplus_mul_add_sb_e(const uint16_t *S, const uint16_t *B,
 	uint16_t x[8][8];
 	uint16_t y[8][8];
 	uint16_t z[8][8];
-	memcpy(out, E, SCLOUDPLUS_MBAR * SCLOUDPLUS_NBAR * 2);
+	if (out != E) {
+		memcpy(out, E, SCLOUDPLUS_MBAR * SCLOUDPLUS_NBAR * 2);
+	}
 	for (int i = 0; i < SCLOUDPLUS_MBAR; i += 8)
 	{
 		for (int j = 0; j < SCLOUDPLUS_NBAR; j += 8)

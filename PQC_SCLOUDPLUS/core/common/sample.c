@@ -64,11 +64,11 @@ static void add_block_8x8(uint16_t *dst, const uint16_t src[8][8],
 void scloudplus_mul_add_as_e(const uint8_t *seedA, const uint16_t *S,
 							 const uint16_t *E, uint16_t *B)
 {
-	memcpy(B, E, 2 * SCLOUDPLUS_M * SCLOUDPLUS_NBAR);
-	ALIGN_HEADER(32)
-	uint16_t *AROWOUT = (uint16_t *)calloc((size_t)4 * SCLOUDPLUS_N, sizeof(uint16_t));
-	ALIGN_HEADER(32)
+	if (B != E) {
+		memcpy(B, E, 2 * SCLOUDPLUS_M * SCLOUDPLUS_NBAR);
+	}
 	uint32_t *AROWIN = (uint32_t *)calloc((size_t)4 * SCLOUDPLUS_BLOCK_ROWLEN, sizeof(uint32_t));
+	uint16_t *AROWOUT = (uint16_t *)calloc((size_t)4 * SCLOUDPLUS_N, sizeof(uint16_t));
 	uint8_t aes_key_schedule[16 * 11];
 	uint16_t x[8][8];
 	uint16_t y[8][8];
@@ -81,7 +81,6 @@ void scloudplus_mul_add_as_e(const uint8_t *seedA, const uint16_t *S,
 	AES128_load_schedule(seedA, aes_key_schedule);
 	for (int i = 0; i < SCLOUDPLUS_M; i += 4)
 	{
-
 		for (int j = 0; j < SCLOUDPLUS_BLOCK_NUMBER; j += 1)
 		{
 			AROWIN[SCLOUDPLUS_BLOCK_SIZE * j + 0 * SCLOUDPLUS_BLOCK_ROWLEN] =
@@ -117,18 +116,15 @@ void scloudplus_mul_add_as_e(const uint8_t *seedA, const uint16_t *S,
 	free(AROWOUT);
 	free(AROWIN);
 }
+
+
 // This code is based on the implementation of FrodoKEM
 void scloudplus_mul_add_sa_e(const uint8_t *seedA, const uint16_t *S,
 							 uint16_t *E, uint16_t *C)
 {
-
-	ALIGN_HEADER(32)
-	uint16_t *AROWOUT = (uint16_t *)calloc((size_t)8 * SCLOUDPLUS_N, sizeof(uint16_t));
-
-	uint8_t aes_key_schedule[16 * 11];
-
-	ALIGN_HEADER(32)
 	uint32_t *AROWIN = (uint32_t *)calloc((size_t)8 * SCLOUDPLUS_BLOCK_ROWLEN, sizeof(uint32_t));
+	uint16_t *AROWOUT = (uint16_t *)calloc((size_t)8 * SCLOUDPLUS_N, sizeof(uint16_t));
+	uint8_t aes_key_schedule[16 * 11];
 	uint16_t x[8][8];
 	uint16_t y[8][8];
 	uint16_t z[8][8];
@@ -169,12 +165,16 @@ void scloudplus_mul_add_sa_e(const uint8_t *seedA, const uint16_t *S,
 			}
 		}
 	}
-	memcpy((unsigned char *)C, (unsigned char *)E,
-		   2 * SCLOUDPLUS_MBAR * SCLOUDPLUS_N);
+	if (C != E) {
+		memcpy((unsigned char *)C, (unsigned char *)E,
+			   2 * SCLOUDPLUS_MBAR * SCLOUDPLUS_N);
+	}
 	AES128_free_schedule(aes_key_schedule);
 	free(AROWOUT);
 	free(AROWIN);
 }
+
+
 
 static inline uint32_t read3bytestou32(const uint8_t *ptr)
 {
