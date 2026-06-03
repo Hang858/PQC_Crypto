@@ -11,7 +11,7 @@ BASE_CFLAGS = -O3 -Wall -Wextra -Wpedantic -std=c99 -DUSE_HARDWARE_HASH \
 	-I$(INCLUDE_PATH) -I$(CORE_PATH) -I$(COMMON_PATH) \
 	-I. -Isoft -I$(TEST_PATH)
 
-COMMON_SRCS = kem noise util frodo_macrify_reference frodokem_params random fips202
+COMMON_SRCS = kem noise util frodo_macrify frodokem_params random fips202
 PLATFORM_SRCS = op_hash op_matrix op_trng op_fpr sha256 sm3 endian
 
 LIB = libpqc_frodokem.a

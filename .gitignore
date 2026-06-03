@@ -15,5 +15,5 @@ test_scloudplus_ref
 .DS_Store
 .vscode/
 build/
-
+.cache/*
 standard/
