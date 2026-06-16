@@ -59,12 +59,13 @@ int crypto_kem_keypair(uint8_t *ek_kem, uint8_t *dk_kem) {
     // Compute HQC-PKE keypair
     hqc_pke_keygen(ek_pke, dk_pke, seed_pke);
 
-    // Compute HQC-KEM keypair
-    memcpy(ek_kem, ek_pke, PUBLIC_KEY_BYTES);
-    memcpy(dk_kem, ek_kem, PUBLIC_KEY_BYTES);
-    memcpy(dk_kem + PUBLIC_KEY_BYTES, dk_pke, SEED_BYTES);
-    memcpy(dk_kem + PUBLIC_KEY_BYTES + SEED_BYTES, sigma, PARAM_SECURITY_BYTES);
-    memcpy(dk_kem + PUBLIC_KEY_BYTES + SEED_BYTES + PARAM_SECURITY_BYTES, seed_kem, SEED_BYTES);
+    // Compute HQC-KEM keypair (use runtime level-specific sizes)
+    unsigned int pkbytes = HQC_active_params()->publickeybytes;
+    memcpy(ek_kem, ek_pke, pkbytes);
+    memcpy(dk_kem, ek_kem, pkbytes);
+    memcpy(dk_kem + pkbytes, dk_pke, SEED_BYTES);
+    memcpy(dk_kem + pkbytes + SEED_BYTES, sigma, PARAM_SECURITY_BYTES);
+    memcpy(dk_kem + pkbytes + SEED_BYTES + PARAM_SECURITY_BYTES, seed_kem, SEED_BYTES);
 
 #ifdef VERBOSE
     HQC_LOGF("\n\nseed_kem: ");
@@ -246,9 +247,10 @@ int crypto_kem_dec(uint8_t *K_prime, const uint8_t *c_kem, const uint8_t *dk_kem
     }
 
     // Parse decapsulation key dk_kem
-    memcpy(ek_pke, dk_kem, PUBLIC_KEY_BYTES);
-    memcpy(dk_pke, dk_kem + PUBLIC_KEY_BYTES, SEED_BYTES);
-    memcpy(sigma, dk_kem + PUBLIC_KEY_BYTES + SEED_BYTES, PARAM_SECURITY_BYTES);
+    unsigned int pkbytes = HQC_active_params()->publickeybytes;
+    memcpy(ek_pke, dk_kem, pkbytes);
+    memcpy(dk_pke, dk_kem + pkbytes, SEED_BYTES);
+    memcpy(sigma, dk_kem + pkbytes + SEED_BYTES, PARAM_SECURITY_BYTES);
 
     // Parse ciphertext c_kem
     hqc_c_kem_from_string(&c_kem_t->c_pke, c_kem_t->salt, c_kem);

@@ -1,31 +1,24 @@
 /**
- * 更新时间： 12-18
+ * 更新时间： 2026-01-12 14:31
  * @file operator_interface.h
  * @brief 硬件算子抽象接口汇总，用于软件团队适配算法工作。
  * * 依据《硬件算子汇总》文档整理。
  */
 
-#ifndef HARDWARE_DRIVER_H
-#define HARDWARE_DRIVER_H
+#ifndef OPERATOR_INTERFACE_H
+#define OPERATOR_INTERFACE_H
 
- #include <stdint.h>
+#include <stdint.h>
 #include <stddef.h>
+#include <stdlib.h>
 
  /* --- 宏定义与常量 --- */
 
 //待补充
- /* --- 宏定义与常量 --- */
- #define OP_SUCCESS 0
- #define OP_FAILURE -1
- 
- #define MAX_NTT_OMEGA_COUNT 8  // 最大支持8个旋转因子（4个正变换，4个逆变换）
+#define OP_SUCCESS 0
+#define OP_FAILURE -1
 
-#define MONT (-4186625) // 2^32 % Q
-#define QINV 58728449 // q^(-1) mod 2^32
-#define QINV_N 41978 // mont^2/256 mod Q (用于 OP_intt256 最后的归一化，对应原始实现中的 f) 
-// 声明 M256_Dilithium 数组（定义在 operator_interface.c 中）
-extern const int32_t M256_Dilithium[512];
-
+#define MAX_NTT_OMEGA_COUNT 8  // 最大支持8个旋转因子（4个正变换，4个逆变换）
 
 //1:SHA256; 2:SM3  3:SHAKE256; 待定：4:SHAKE128; 5:SHA3-256; 6: SHA3-384; 7: SHA3-512
 #define OP_ALG_SHA256   1
@@ -40,17 +33,14 @@ extern const int32_t M256_Dilithium[512];
 #define OP_MODE_LMS 1
 #define OP_MODE_SPHINCS 2
 
-#define OP_STATE_SIZE_SM3 104
-#define OP_STATE_SIZE_SHA3 208
-
-typedef double op_fpr_t;
-
 #define ABORT_IF_FAIL(x) if ((x) != OP_SUCCESS) { \
         abort(); \
     } \
 
- /* --- 硬件算子接口声明 --- */
+/* --- fpr 浮点类型：IEEE-754 binary64 的 64-bit 整数表示 --- */
+typedef double op_fpr_t;
 
+ /* --- 硬件算子接口声明 --- */
  /**
  * @brief 算子1.0. 初始化
  * @param omega  输入：旋转因子数组 (count个旋转因子，每个旋转因子包含256个 32-bit 元素，前面是所有的正变换旋转因子，后面是所有的逆变换旋转因子)
@@ -63,6 +53,7 @@ typedef double op_fpr_t;
  */
 int OP_ntt256_init(const int32_t *omega, int32_t count, int32_t q, int32_t inv_q, int32_t inv_n, int32_t k);
 
+
  /**
  * @brief 算子1.1. 正向数论变换 (NTT)  
  * * 将多项式从时域转换到频域。
@@ -70,11 +61,10 @@ int OP_ntt256_init(const int32_t *omega, int32_t count, int32_t q, int32_t inv_q
  * 
  * @param a_out  输出：变换后的系数数组 (256个 32-bit 元素)
  * @param a_in   输入：待变换的多项式系数数组 (256个 32-bit 元素)
+ * @param omega_index 输入：选择使用的旋转因子索引 (0 到 count/2 - 1)
  * @return       0: 成功; -1: 失败。
  */
 int OP_ntt256(int32_t a_out[256], const int32_t a_in[256], int omega_index);
-//int OP_ntt256(int32_t a_out[256], const int32_t a_in[256], const int32_t omega[256], int32_t q);
-
 
 
 /**
@@ -83,39 +73,40 @@ int OP_ntt256(int32_t a_out[256], const int32_t a_in[256], int omega_index);
  * 
  * @param a_out  输出：恢复后的时域多项式 (256个 32-bit 元素)
  * @param a_in   输入：频域多项式系数 (256个 32-bit 元素)
+ * @param omega_index 输入：选择使用的旋转因子索引 (count/2 到 count - 1)
  * @return       0: 成功; -1: 失败。
  */
 int OP_intt256(int32_t a_out[256], const int32_t a_in[256], int omega_index);
-//int OP_intt256(int32_t a_out[256], const int32_t a_in[256], const int32_t omega[256], int32_t q);
+
+
 /**
- * @brief 算子1.3. 向量点乘 (CWM - Coefficient-Wise Multiplication)
+ * @brief 算子1.3. 多项式乘 (CWM - Coefficient-Wise Multiplication)
  * * 在频域对两个多项式进行对应系数模乘。
  * 
  * @param c_out  输出：点乘结果多项式  (n个 32-bit 元素)
  * @param a_in   输入：多项式 A 的频域表示 (n个 32-bit 元素)
  * @param b_in   输入：多项式 B 的频域表示 (n个 32-bit 元素)
- * @param n      输入：维数 (最大 1024)
- * @param q      输入：模数（最长 32bit）
+ * @param n      输入：维数(最大 1024)
+ * @param q      输入：模数(最长 31bit)
+ * @param k      输入：剩余层数（硬件支持0, 1; 软件实现2, 3）
  * @return       0: 成功; -1: 失败。
  */
-// int OP_cwm(int32_t *c_out, const int32_t *a_in, const int32_t *b_in, uint32_t n, int32_t q);
 int OP_cwm(int32_t *c_out, const int32_t *a_in, const int32_t *b_in, int32_t n, int32_t q, int32_t k);
- 
+
+
+
 /**
- * @brief 算子2. 向量乘法  (元素数量可变)
- * * Z = (X * Y) mod q
- * 
- * @param z_out     输出：一个 16-bit 元素。
- * @param x_in      输入：向量  (length个 16-bit 元素)。
- * @param y_in      输入：向量  (length个 16-bit 元素)。
- * @param length    输入：向量长度。（最大长度：Frodo: 1344, scloudplus: 1136）
- * @param q         输入：模数 (16-bit) 2的次幂。
- * @return          0: 成功; -1: 失败。
- * 待定：数据无符号
+ * @brief 算子2. 矩阵乘法 8x8 (mod q)
+ * * Z = X * Y mod q, q 为 2 的次幂
+ * @param z_out  输出：8x8 矩阵
+ * @param x_in   输入：8x8 矩阵
+ * @param y_in   输入：8x8 矩阵
+ * @param q      输入：模数 (2 的次幂)
+ * @return       0: 成功; -1: 失败。
  */
-int OP_vector_mul(uint16_t *z_out, const uint16_t *x_in, const uint16_t *y_in, uint16_t length, uint16_t q);
- 
- 
+int OP_matrix_mul_8x8(uint16_t z_out[8][8], const uint16_t x_in[8][8], const uint16_t y_in[8][8], uint16_t q);
+
+
 /**
  * @brief 算子3.1 单包哈希
  * 
@@ -168,52 +159,96 @@ int OP_hash_squeeze(uint8_t alg, void *s, int s_len, void *output, int output_le
 
 
 
- 
-  /**
-  * @brief 算子4. 硬件随机数生成  (拒绝均匀采样)
-  * 内部实现：
-  * 调用硬件TRNG模块，生成真随机数作为种子；
-  * 基于该种子，生成伪随机数。
-  * 
-  * @param buffer  输出：存储随机数的缓冲区。
-  * @param size    输入：需要获取的随机数长度。
-  * @return        0: 成功; -1: 硬件故障/熵源不足。
-  * 待定： 接口是否直接调用硬件TRNG模块？
-  */
+ /**
+ * @brief 算子4. 硬件随机数生成  (拒绝均匀采样)
+ * 内部实现：
+ * 调用硬件TRNG模块，生成真随机数作为种子；
+ * 基于该种子，生成伪随机数。
+ * 
+ * @param buffer  输出：存储随机数的缓冲区。
+ * @param size    输入：需要获取的随机数长度。
+ * @return        0: 成功; -1: 硬件故障/熵源不足。
+ * 待定：接口是否直接调用硬件TRNG模块？
+ * 待定：试点算法未定
+ */
 int OP_trng(void *buffer, int size);
 
-/**
- * @brief 算子2. 矩阵乘法 (8x8 规模)
- * * Z = (X * Y) mod q
- *
- * @param z_out     输出：存储结果的 8x8 矩阵 (64个 16-bit 元素)。
- * @param x_in      输入：左矩阵 8x8 (64个 16-bit 元素)。
- * @param y_in      输入：右矩阵 8x8 (64个 16-bit 元素)。
- * @param q         输入：模数 (16-bit) 2的幂；q=0 表示 2^16。
- * @return          0: 成功; -1: 失败。
- */
-int OP_matrix_mul_8x8(uint16_t z_out[8][8], const uint16_t x_in[8][8], const uint16_t y_in[8][8], uint16_t q);
-int OP_fpr_add(op_fpr_t a, op_fpr_t b, op_fpr_t *out);
-int OP_fpr_sub(op_fpr_t a, op_fpr_t b, op_fpr_t *out);
-int OP_fpr_mul(op_fpr_t a, op_fpr_t b, op_fpr_t *out);
-int OP_fpr_div(op_fpr_t a, op_fpr_t b, op_fpr_t *out);
-int OP_fpr_sqrt(op_fpr_t a, op_fpr_t *out);
-int OP_fpr_lt(op_fpr_t a, op_fpr_t b, uint8_t *out);
- 
- 
+
 /**
  * @brief 算子5. 有限域运算
  *  0: 模加        C=(a+b) mod n
  *  1: 模减        C=(a-b) mod n
  *  2: 模乘        C=(a*b) mod n
- *  3: 模幂(模逆)  C=a^b   mod n
- * @param c_out    输出：结果 C (大整数，字节数组表示，小端字节序)
- * @param opr 输入：运算类型 (0: 模加；1: 模减；2: 模乘；3: 模幂/模逆)
- * @param a_in     输入：底数 a (大整数，字节数组表示，小端字节序)
- * @param b_in     输入：指数 b (大整数，字节数组表示，小端字节序)
- * @param n_in     输入：模数 n (大整数，字节数组表示，小端字节序，软件实现仅需支持5*2^248-1、65*2^376-1、27*2^500-1)
- * @param len      输入：大整数的字节长度
+ *  3: 模幂        C=a^b   mod n
+ *  4: 模逆        C=a^(-1)mod n
+ * @param c_out    输出：结果 C (大整数，数组表示，小端字节序)
+ * @param opr 输入：运算类型 (0: 模加；1: 模减；2: 模乘；3: 模幂；4：模逆)
+ * @param a_in     输入：底数 a (大整数，数组表示，小端字节序)
+ * @param b_in     输入：指数 b (大整数，数组表示，小端字节序)
+ * @param n_in     输入：模数 n (大整数，数组表示，小端字节序，软件实现仅需支持5*2^248-1、65*2^376-1、27*2^500-1)
+ * @param len      输入：大整数的长度，每个数组有多少个 64-bit 元素
  * @return         0: 成功; -1: 失败。
  */
-int OP_finite_field(uint8_t *c_out, uint8_t opr, uint8_t *a_in, uint8_t *b_in, uint8_t *n_in,  int len);
- #endif
+int OP_finite_field(uint64_t *c_out, uint8_t opr, const uint64_t *a_in, const uint64_t *b_in, const uint64_t *n_in, int len);
+
+
+/**
+ * @brief 算子6.1 浮点加法
+ * * 计算 a + b
+ * @param a   输入：加数 a (双精度)
+ * @param b   输入：加数 b (双精度)
+ * @param out 输出：结果 a + b (双精度)
+ * @return    0: 成功; -1: 失败。
+ */
+int OP_fpr_add(op_fpr_t a, op_fpr_t b, op_fpr_t *out);
+
+/**
+ * @brief 算子6.2 浮点减法
+ * * 计算 a - b
+ * @param a   输入：被减数 a (双精度)
+ * @param b   输入：减数 b (双精度)
+ * @param out 输出：结果 a - b (双精度)
+ * @return    0: 成功; -1: 失败。
+ */
+int OP_fpr_sub(op_fpr_t a, op_fpr_t b, op_fpr_t *out);
+
+/**
+ * @brief 算子6.3 浮点乘法
+ * * 计算 a * b
+ * @param a   输入：乘数 a (双精度)
+ * @param b   输入：乘数 b (双精度)
+ * @param out 输出：结果 a * b (双精度)
+ * @return    0: 成功; -1: 失败。
+ */
+int OP_fpr_mul(op_fpr_t a, op_fpr_t b, op_fpr_t *out);
+
+/**
+ * @brief 算子6.4 浮点除法
+ * * 计算 a / b
+ * @param a   输入：被除数 a (双精度)
+ * @param b   输入：除数 b (双精度)
+ * @param out 输出：结果 a / b (双精度)
+ * @return    0: 成功; -1: 失败。
+ */
+int OP_fpr_div(op_fpr_t a, op_fpr_t b, op_fpr_t *out);
+
+/**
+ * @brief 算子6.5 浮点平方根
+ * * 计算 sqrt(a), a >= 0
+ * @param a   输入：被开方数 a (双精度, 必须 >= 0)
+ * @param out 输出：结果 sqrt(a) (双精度)
+ * @return    0: 成功; -1: 失败。
+ */
+int OP_fpr_sqrt(op_fpr_t a, op_fpr_t *out);
+
+/**
+ * @brief 算子6.6 浮点比较
+ * * 判断 a < b
+ * @param a   输入：左操作数 a (双精度)
+ * @param b   输入：右操作数 b (双精度)
+ * @param out 输出：1 如果 a < b，否则 0
+ * @return    0: 成功; -1: 失败。
+ */
+int OP_fpr_lt(op_fpr_t a, op_fpr_t b, uint8_t *out);
+
+#endif /* OPERATOR_INTERFACE_H */

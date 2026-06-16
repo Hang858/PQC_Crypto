@@ -104,6 +104,10 @@ static MunitResult test_kem_sk_corruption(const MunitParameter params[], void *u
     (void)params;
     (void)user_data;
 
+    const hqc_params_t *p = HQC_active_params();
+    unsigned int pkbytes = p->publickeybytes;
+    unsigned int skbytes = p->secretkeybytes;
+
     uint8_t *pk = calloc(CRYPTO_PUBLICKEYBYTES, 1);
     uint8_t *sk = calloc(CRYPTO_SECRETKEYBYTES, 1);
     uint8_t *sk_bad = calloc(CRYPTO_SECRETKEYBYTES, 1);
@@ -114,18 +118,18 @@ static MunitResult test_kem_sk_corruption(const MunitParameter params[], void *u
     munit_assert_int(crypto_kem_keypair(pk, sk), ==, 0);
     munit_assert_int(crypto_kem_enc(ct, ss_enc, pk), ==, 0);
 
-    memcpy(sk_bad, sk, CRYPTO_SECRETKEYBYTES);
-    flip_random_bit(sk_bad, 0, CRYPTO_PUBLICKEYBYTES);
+    memcpy(sk_bad, sk, skbytes);
+    flip_random_bit(sk_bad, 0, pkbytes);
     crypto_kem_dec(ss_dec, ct, sk_bad);
     munit_assert_memory_not_equal(CRYPTO_BYTES, ss_enc, ss_dec);
 
-    memcpy(sk_bad, sk, CRYPTO_SECRETKEYBYTES);
-    flip_random_bit(sk_bad, CRYPTO_PUBLICKEYBYTES, SEED_BYTES);
+    memcpy(sk_bad, sk, skbytes);
+    flip_random_bit(sk_bad, pkbytes, SEED_BYTES);
     crypto_kem_dec(ss_dec, ct, sk_bad);
     munit_assert_memory_not_equal(CRYPTO_BYTES, ss_enc, ss_dec);
 
-    memcpy(sk_bad, sk, CRYPTO_SECRETKEYBYTES);
-    flip_random_bit(sk_bad, CRYPTO_PUBLICKEYBYTES + SEED_BYTES, PARAM_SECURITY_BYTES);
+    memcpy(sk_bad, sk, skbytes);
+    flip_random_bit(sk_bad, pkbytes + SEED_BYTES, PARAM_SECURITY_BYTES);
     crypto_kem_dec(ss_dec, ct, sk_bad);
     munit_assert_memory_equal(CRYPTO_BYTES, ss_enc, ss_dec);
 

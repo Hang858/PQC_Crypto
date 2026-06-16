@@ -34,7 +34,7 @@ static inline uint32_t compare_u32(const uint32_t v1, const uint32_t v2) {
  * @return x mod PARAM_N in constant time.
  */
 static inline uint32_t barrett_reduce(uint32_t x) {
-    uint64_t q = ((uint64_t)x * PARAM_N_MU) >> 32;
+    uint64_t q = ((uint64_t)x * HQC_active_params()->params_n_mu) >> 32;
     uint32_t r = x - (uint32_t)(q * PARAM_N);
 
     uint32_t reduce_flag = (((r - PARAM_N) >> 31) ^ 1);
@@ -82,7 +82,7 @@ void vect_generate_random_support1(shake256_xof_ctx *ctx, uint32_t *support, uin
             support[i] |= ((uint32_t)rand_bytes[j++]) << 8;
             support[i] |= rand_bytes[j++];
 
-        } while (support[i] >= UTILS_REJECTION_THRESHOLD);
+        } while (support[i] >= HQC_active_params()->rejection_threshold);
 
         support[i] = barrett_reduce(support[i]);
 

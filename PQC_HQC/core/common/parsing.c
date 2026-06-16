@@ -47,9 +47,11 @@ void hqc_ek_pke_from_string(uint64_t *h, uint64_t *s, const uint8_t *ek_pke) {
  * @param[in]  c_kem    Pointer to the KEM ciphertext structure to be serialized.
  */
 void hqc_c_kem_to_string(uint8_t *ct, const ciphertext_kem_t *c_kem) {
-    memcpy(ct, c_kem->c_pke.u, VEC_N_SIZE_BYTES);
-    memcpy(ct + VEC_N_SIZE_BYTES, c_kem->c_pke.v, VEC_N1N2_SIZE_BYTES);
-    memcpy(ct + VEC_N_SIZE_BYTES + VEC_N1N2_SIZE_BYTES, c_kem->salt, SALT_BYTES);
+    unsigned int n_bytes = CEIL_DIVIDE(HQC_active_params()->n, 8);
+    unsigned int n1n2_bytes = CEIL_DIVIDE(HQC_active_params()->n1n2, 8);
+    memcpy(ct, c_kem->c_pke.u, n_bytes);
+    memcpy(ct + n_bytes, c_kem->c_pke.v, n1n2_bytes);
+    memcpy(ct + n_bytes + n1n2_bytes, c_kem->salt, SALT_BYTES);
 }
 
 /**
@@ -60,7 +62,9 @@ void hqc_c_kem_to_string(uint8_t *ct, const ciphertext_kem_t *c_kem) {
  * @param[in]  ct       Pointer to the serialized KEM ciphertext.
  */
 void hqc_c_kem_from_string(ciphertext_pke_t *c_pke, uint8_t *salt, const uint8_t *ct) {
-    memcpy(c_pke->u, ct, VEC_N_SIZE_BYTES);
-    memcpy(c_pke->v, ct + VEC_N_SIZE_BYTES, VEC_N1N2_SIZE_BYTES);
-    memcpy(salt, ct + VEC_N_SIZE_BYTES + VEC_N1N2_SIZE_BYTES, SALT_BYTES);
+    unsigned int n_bytes = CEIL_DIVIDE(HQC_active_params()->n, 8);
+    unsigned int n1n2_bytes = CEIL_DIVIDE(HQC_active_params()->n1n2, 8);
+    memcpy(c_pke->u, ct, n_bytes);
+    memcpy(c_pke->v, ct + n_bytes, n1n2_bytes);
+    memcpy(salt, ct + n_bytes + n1n2_bytes, SALT_BYTES);
 }

@@ -124,7 +124,7 @@ void hash_h(uint8_t *output, const uint8_t *ek_kem) {
     sha3_256_ctx h_hash_ctx = {0};
     uint8_t h_domain = HQC_H_FCT_DOMAIN;
     sha3_256_inc_init(&h_hash_ctx);
-    sha3_256_inc_absorb(&h_hash_ctx, ek_kem, PUBLIC_KEY_BYTES);
+    sha3_256_inc_absorb(&h_hash_ctx, ek_kem, HQC_active_params()->publickeybytes);
     sha3_256_inc_absorb(&h_hash_ctx, &h_domain, 1);
     sha3_256_inc_finalize(output, &h_hash_ctx);
 }
@@ -163,8 +163,8 @@ void hash_j(uint8_t *output, const uint8_t hash_ek_kem[SEED_BYTES], const uint8_
     sha3_256_inc_init(&k_hash_ctx);
     sha3_256_inc_absorb(&k_hash_ctx, hash_ek_kem, SEED_BYTES);
     sha3_256_inc_absorb(&k_hash_ctx, sigma, PARAM_SECURITY_BYTES);
-    sha3_256_inc_absorb(&k_hash_ctx, (uint8_t *)c_kem->c_pke.u, VEC_N_SIZE_BYTES);
-    sha3_256_inc_absorb(&k_hash_ctx, (uint8_t *)c_kem->c_pke.v, VEC_N1N2_SIZE_BYTES);
+    sha3_256_inc_absorb(&k_hash_ctx, (uint8_t *)c_kem->c_pke.u, CEIL_DIVIDE(HQC_active_params()->n, 8));
+    sha3_256_inc_absorb(&k_hash_ctx, (uint8_t *)c_kem->c_pke.v, CEIL_DIVIDE(HQC_active_params()->n1n2, 8));
     sha3_256_inc_absorb(&k_hash_ctx, c_kem->salt, SALT_BYTES);
     sha3_256_inc_absorb(&k_hash_ctx, &k_domain, 1);
     sha3_256_inc_finalize(output, &k_hash_ctx);

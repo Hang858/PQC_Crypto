@@ -86,7 +86,7 @@ void reed_solomon_encode(uint64_t *cdw, const uint64_t *msg) {
     uint8_t gate_value = 0;
 
     uint16_t *tmp = calloc(HQC_MAX_G, sizeof(uint16_t));
-    uint16_t rs_poly[] = {RS_POLY_COEFS};
+    const uint16_t *rs_poly = HQC_active_params()->rs_poly;
 
     uint8_t *msg_bytes = calloc(HQC_MAX_K, sizeof(uint8_t));
     uint8_t *cdw_bytes = calloc(HQC_MAX_N1, sizeof(uint8_t));
