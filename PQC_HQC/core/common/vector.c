@@ -61,40 +61,31 @@ static inline uint32_t barrett_reduce(uint32_t x) {
  * @param[in]     weight  Desired Hamming weight.
  */
 void vect_generate_random_support1(shake256_xof_ctx *ctx, uint32_t *support, uint16_t weight) {
-    size_t random_bytes_size = 3 * weight;
-    uint8_t *rand_bytes = calloc(3 * HQC_MAX_OMEGA_R, sizeof(uint8_t));
-    uint8_t inc;
-    size_t i, j;
-    if (rand_bytes == NULL) {
-        return;
-    }
+    uint8_t rand_bytes[3] = {0};
+    uint32_t candidate = 0;
 
-    i = 0;
-    j = random_bytes_size;
-    while (i < weight) {
-        do {
-            if (j == random_bytes_size) {
-                xof_get_bytes(ctx, rand_bytes, random_bytes_size);
-                j = 0;
-            }
+    for (size_t i = 0; i < weight;) {
+        xof_get_bytes(ctx, rand_bytes, 3);
+        candidate = rand_bytes[0] | (rand_bytes[1] << 8) | (rand_bytes[2] << 16);
 
-            support[i] = ((uint32_t)rand_bytes[j++]) << 16;
-            support[i] |= ((uint32_t)rand_bytes[j++]) << 8;
-            support[i] |= rand_bytes[j++];
+        if (candidate >= HQC_active_params()->rejection_threshold) {
+            continue;
+        }
+        candidate = barrett_reduce(candidate);
 
-        } while (support[i] >= HQC_active_params()->rejection_threshold);
-
-        support[i] = barrett_reduce(support[i]);
-
-        inc = 1;
-        for (size_t k = 0; k < i; k++) {
-            if (support[k] == support[i]) {
-                inc = 0;
+        int is_position_available = 1;
+        for (size_t j = 0; j < i; j++) {
+            if (candidate == support[j]) {
+                is_position_available = 0;
+                break;
             }
         }
-        i += inc;
+
+        if (is_position_available == 1) {
+            support[i] = candidate;
+            i++;
+        }
     }
-    free(rand_bytes);
 }
 
 /**
