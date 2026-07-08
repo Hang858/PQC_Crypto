@@ -14,9 +14,9 @@ int frodo_mul_add_as_plus_e(uint16_t *out, const uint16_t *s, const uint16_t *e,
 { // Generate-and-multiply: generate matrix A (N x N) row-wise, multiply by s on the right.
   // Inputs: s, e (N x N_BAR)
   // Output: out = A*s + e (N x N_BAR)
+  // Low-memory: A is streamed one 8x8 tile at a time using 8 incremental SHAKE states
+  // (one per row of the current row-block), so no full A row buffer is held.
     int i, j;
-    int16_t *a_row = (int16_t *)malloc((size_t)8 * PARAMS_N * sizeof(int16_t));
-    if (a_row == NULL) return 0;
 
     for (i = 0; i < (PARAMS_N*PARAMS_NBAR); i += 2) {
         *((uint32_t*)&out[i]) = *((uint32_t*)&e[i]);
@@ -26,13 +26,13 @@ int frodo_mul_add_as_plus_e(uint16_t *out, const uint16_t *s, const uint16_t *e,
     uint16_t* seed_A_origin = (uint16_t*)&seed_A_separated;
     memcpy(&seed_A_separated[2], seed_A, BYTES_SEED_A);
 
+    uint64_t a_state[8][FRODO_SHA3_STATE_U64];  // 8 SHAKE128 states, one per A row in the block
+
     for (i = 0; i < PARAMS_N; i += 8) {
         for (int r = 0; r < 8; r++) {
             seed_A_origin[0] = UINT16_TO_LE(i + r);
-            shake128((unsigned char*)(a_row + r*PARAMS_N), (unsigned long long)(2*PARAMS_N), seed_A_separated, 2 + BYTES_SEED_A);
-        }
-        for (int k = 0; k < 8 * PARAMS_N; k++) {
-            a_row[k] = LE_TO_UINT16(a_row[k]);
+            OP_hash_init(OP_ALG_SHAKE128, a_state[r], (int)sizeof(a_state[r]));
+            OP_hash_absorb(OP_ALG_SHAKE128, a_state[r], (int)sizeof(a_state[r]), seed_A_separated, 2 + BYTES_SEED_A);
         }
 
         uint16_t acc[8][8];
@@ -45,15 +45,16 @@ int frodo_mul_add_as_plus_e(uint16_t *out, const uint16_t *s, const uint16_t *e,
         for (j = 0; j < PARAMS_N; j += 8) {
             uint16_t x[8][8], y[8][8];
             for (int r = 0; r < 8; r++) {
+                uint8_t abuf[16];  // 8 uint16 of row (i+r), columns j..j+7
+                OP_hash_squeeze(OP_ALG_SHAKE128, a_state[r], (int)sizeof(a_state[r]), abuf, (int)sizeof(abuf));
                 for (int c = 0; c < 8; c++) {
-                    x[r][c] = (uint16_t)a_row[r*PARAMS_N + (j + c)];
+                    x[r][c] = (uint16_t)(abuf[2*c] | ((uint16_t)abuf[2*c + 1] << 8));
                     y[r][c] = s[c*PARAMS_N + (j + r)];
                 }
             }
 
             uint16_t z[8][8];
             if (OP_matrix_mul_8x8(z, (const uint16_t (*)[8])x, (const uint16_t (*)[8])y, (uint16_t)PARAMS_Q) != OP_SUCCESS) {
-                free(a_row);
                 return 0;
             }
             for (int r = 0; r < 8; r++) {
@@ -70,30 +71,27 @@ int frodo_mul_add_as_plus_e(uint16_t *out, const uint16_t *s, const uint16_t *e,
         }
     }
 
-    free(a_row);
     return 1;
 }
 
 
-int frodo_mul_add_sa_plus_e(uint16_t *out, const uint16_t *s, uint16_t *e, const uint8_t *seed_A)
+int frodo_mul_add_sa_plus_e(uint16_t *out, const uint16_t *s, const uint8_t *seed_A)
 { // Generate-and-multiply: generate matrix A (N x N) column-wise, multiply by s' on the left.
-  // Inputs: s', e' (N_BAR x N)
-  // Output: out = s'*A + e' (N_BAR x N)
+  // Inputs: s' (N_BAR x N); out must already contain the error e' (N_BAR x N)
+  // Output: out = s'*A + e' (N_BAR x N), accumulated in place
     int i, q_block;
-    uint16_t *A = (uint16_t *)malloc((size_t)8 * PARAMS_N * sizeof(uint16_t));
-    if (A == NULL) return 0;
 
     uint8_t seed_A_separated[2 + BYTES_SEED_A];
     uint16_t* seed_A_origin = (uint16_t*)&seed_A_separated;
     memcpy(&seed_A_separated[2], seed_A, BYTES_SEED_A);
 
+    uint64_t a_state[8][FRODO_SHA3_STATE_U64];  // 8 SHAKE128 states, one per A row in the block
+
     for (i = 0; i < PARAMS_N; i += 8) {
         for (int r = 0; r < 8; r++) {
             seed_A_origin[0] = UINT16_TO_LE(i + r);
-            shake128((unsigned char*)(A + r*PARAMS_N), (unsigned long long)(2*PARAMS_N), seed_A_separated, 2 + BYTES_SEED_A);
-        }
-        for (int k = 0; k < 8 * PARAMS_N; k++) {
-            A[k] = LE_TO_UINT16(A[k]);
+            OP_hash_init(OP_ALG_SHAKE128, a_state[r], (int)sizeof(a_state[r]));
+            OP_hash_absorb(OP_ALG_SHAKE128, a_state[r], (int)sizeof(a_state[r]), seed_A_separated, 2 + BYTES_SEED_A);
         }
 
         uint16_t x[8][8];
@@ -106,26 +104,25 @@ int frodo_mul_add_sa_plus_e(uint16_t *out, const uint16_t *s, uint16_t *e, const
         for (q_block = 0; q_block < PARAMS_N; q_block += 8) {
             uint16_t y[8][8];
             for (int r = 0; r < 8; r++) {
+                uint8_t abuf[16];  // 8 uint16 of row (i+r), columns q_block..q_block+7
+                OP_hash_squeeze(OP_ALG_SHAKE128, a_state[r], (int)sizeof(a_state[r]), abuf, (int)sizeof(abuf));
                 for (int c = 0; c < 8; c++) {
-                    y[r][c] = (uint16_t)A[r*PARAMS_N + (q_block + c)];
+                    y[r][c] = (uint16_t)(abuf[2*c] | ((uint16_t)abuf[2*c + 1] << 8));
                 }
             }
 
             uint16_t z[8][8];
             if (OP_matrix_mul_8x8(z, (const uint16_t (*)[8])x, (const uint16_t (*)[8])y, (uint16_t)PARAMS_Q) != OP_SUCCESS) {
-                free(A);
                 return 0;
             }
             for (int r = 0; r < PARAMS_NBAR; r++) {
                 for (int c = 0; c < 8; c++) {
-                    e[r*PARAMS_N + (q_block + c)] = (uint16_t)(e[r*PARAMS_N + (q_block + c)] + z[r][c]);
+                    out[r*PARAMS_N + (q_block + c)] = (uint16_t)(out[r*PARAMS_N + (q_block + c)] + z[r][c]);
                 }
             }
         }
     }
-    memcpy((unsigned char*)out, (unsigned char*)e, 2*PARAMS_N*PARAMS_NBAR);
 
-    free(A);
     return 1;
 }
 
@@ -163,20 +160,27 @@ void frodo_mul_bs(uint16_t *out, const uint16_t *b, const uint16_t *s)
 }
 
 
-void frodo_mul_add_sb_plus_e(uint16_t *out, const uint16_t *b, const uint16_t *s, const uint16_t *e)
+void frodo_mul_add_sb_plus_e(uint16_t *out, const uint8_t *b_packed, const uint16_t *s, const uint16_t *e)
 { // Multiply by s on the left
-  // Inputs: b (N x N_BAR), s (N_BAR x N), e (N_BAR x N_BAR)
+  // Inputs: b_packed = packed B (N x N_BAR), s (N_BAR x N), e (N_BAR x N_BAR)
   // Output: out = s*b + e (N_BAR x N_BAR)
+  // Low-memory: B is unpacked one 8-row tile at a time from its packed form (each 8-row tile
+  // is exactly NBAR*LOGQ bytes, byte-aligned), so the full unpacked B is never materialized.
     int block, i, j, k;
     uint16_t q = (uint16_t)PARAMS_Q;
+    const size_t row_bytes = (size_t)PARAMS_NBAR * PARAMS_LOGQ / 8;  // bytes per row of B
 
     memcpy(out, e, PARAMS_NBAR * PARAMS_NBAR * sizeof(uint16_t));
     for (block = 0; block < PARAMS_N; block += 8) {
+        uint16_t btile[8 * PARAMS_NBAR];  // 8 rows x N_BAR of B
+        frodo_unpack(btile, 8 * PARAMS_NBAR, b_packed + (size_t)block * row_bytes,
+                     8 * row_bytes, PARAMS_LOGQ);
+
         uint16_t x[8][8], y[8][8];
         for (i = 0; i < 8; i++) {
             for (k = 0; k < 8; k++) {
                 x[i][k] = s[i * PARAMS_N + block + k];
-                y[k][i] = b[(block + k) * PARAMS_NBAR + i];
+                y[k][i] = btile[k * PARAMS_NBAR + i];
             }
         }
 

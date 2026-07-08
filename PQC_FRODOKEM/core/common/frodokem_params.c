@@ -1,6 +1,7 @@
 #include "frodokem_params.h"
 #include "api.h"
 #include "fips202.h"
+#include "operator_interface.h"
 
 static void frodokem_shake128(uint8_t *output, size_t outlen, const uint8_t *input, size_t inlen) {
     shake128(output, outlen, input, inlen);
@@ -108,6 +109,12 @@ int FRODOKEM_select_level(frodokem_level_t level) {
 
 void frodokem_shake(uint8_t *output, size_t outlen, const uint8_t *input, size_t inlen) {
     g_frodokem_params->shake(output, outlen, input, inlen);
+}
+
+// Incremental-hash operator algorithm id matching the current level's SHAKE
+// (FrodoKEM-640 uses SHAKE128, FrodoKEM-976/1344 use SHAKE256).
+uint8_t frodokem_shake_alg(void) {
+    return (g_frodokem_params->shake == frodokem_shake128) ? OP_ALG_SHAKE128 : OP_ALG_SHAKE256;
 }
 
 int crypto_kem_keypair(frodokem_level_t level, uint8_t *pk, uint8_t *sk) {

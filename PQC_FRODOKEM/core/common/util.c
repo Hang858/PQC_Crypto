@@ -122,6 +122,27 @@ int8_t ct_verify(const uint16_t *a, const uint16_t *b, size_t len)
 }
 
 
+int8_t ct_verify_packed(const uint16_t *b, const uint8_t *packed, size_t nelem, unsigned int logq)
+{ // Constant-time compare of pack(b) against already-packed bytes. Avoids holding a second
+  // unpacked matrix: since 8 elements pack to exactly logq bytes (byte-aligned), b is packed
+  // one 8-element group at a time into a small buffer and compared with the corresponding slice.
+  // Returns 0 if equal, -1 otherwise.
+    uint8_t tmp[16];  // logq <= 16, so 8 elements produce <= 16 bytes
+    uint16_t r = 0;
+
+    for (size_t k = 0; k < nelem; k += 8) {
+        frodo_pack(tmp, logq, &b[k], 8, (unsigned char)logq);
+        const uint8_t *slice = packed + (k / 8) * logq;
+        for (unsigned int t = 0; t < logq; t++) {
+            r |= (uint16_t)(tmp[t] ^ slice[t]);
+        }
+    }
+
+    r = (-(int16_t)(r >> 1) | -(int16_t)(r & 1)) >> (8*sizeof(uint16_t)-1);
+    return (int8_t)r;
+}
+
+
 void ct_select(uint8_t *r, const uint8_t *a, const uint8_t *b, size_t len, int8_t selector) 
 { // Select one of the two input arrays to be moved to r
   // If (selector == 0) then load r with a, else if (selector == -1) load r with b

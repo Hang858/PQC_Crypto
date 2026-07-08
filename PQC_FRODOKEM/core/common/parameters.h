@@ -29,5 +29,6 @@
 #define shake frodokem_shake
 
 void frodokem_shake(uint8_t *output, size_t outlen, const uint8_t *input, size_t inlen);
+uint8_t frodokem_shake_alg(void);
 
 #endif
