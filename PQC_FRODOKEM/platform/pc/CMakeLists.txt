@@ -12,7 +12,7 @@ set(COMMON_PATH "${CORE_PATH}/common")
 
 set(FRODOKEM_COMMON_SOURCES
     ${COMMON_PATH}/fips202.c
-    ${COMMON_PATH}/frodo_macrify_reference.c
+    ${COMMON_PATH}/frodo_macrify.c
     ${COMMON_PATH}/frodokem_params.c
     ${COMMON_PATH}/kem.c
     ${COMMON_PATH}/noise.c
@@ -55,6 +55,20 @@ target_include_directories(test_frodokem_ref PRIVATE
 )
 
 target_link_libraries(test_frodokem_ref PRIVATE pqc_frodokem)
+
+add_executable(test_frodokem_minimal
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/test_minimal.c
+)
+
+target_include_directories(test_frodokem_minimal PRIVATE
+    ${INCLUDE_PATH}
+    ${CORE_PATH}
+    ${COMMON_PATH}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/soft
+)
+
+target_link_libraries(test_frodokem_minimal PRIVATE pqc_frodokem)
 
 enable_testing()
 add_test(NAME pqc_frodokem_ref COMMAND test_frodokem_ref)

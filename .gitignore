@@ -6,6 +6,9 @@
 
 # 排除特定的可执行二进制文件（根据你的输出）
 test_frodokem_ref
+test_frodokem_minimal
+test_frodokem_640
+kat_runtime
 test_hqc_ref
 test_scloudplus_ref
 .agents
