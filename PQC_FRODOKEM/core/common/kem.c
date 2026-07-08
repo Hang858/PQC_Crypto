@@ -15,9 +15,6 @@
 #endif
 
 
-#define SHA3_STATE_BYTES ((int)(FRODO_SHA3_STATE_U64 * sizeof(uint64_t)))
-
-
 // Expand seedSE into the re-encryption secret Sp (N x N_BAR), the error Ep' (N_BAR x N) and
 // the error Epp' (N_BAR x N_BAR), sampled. The three share one SHAKE stream (domain byte 0x96),
 // squeezed incrementally so Ep' can be written straight into the caller's Bp/BBp buffer
@@ -48,43 +45,6 @@ static void frodo_gen_sp_ep_epp(uint16_t *Sp, uint16_t *ep_out, uint16_t *Epp, c
 
     clear_bytes(shake_input, sizeof(shake_input));
     clear_bytes((uint8_t *)st, sizeof(st));
-}
-
-// Incremental variant: initialize SHAKE state for Sp||Ep'||Epp and squeeze Sp (full).
-// The state is returned so the caller can squeeze Ep' (tile by tile) and Epp.
-static void frodo_gen_sp_init(uint64_t st[FRODO_SHA3_STATE_U64], uint8_t *shake_alg,
-                              uint16_t *Sp, const uint8_t *seedSE)
-{
-    uint8_t shake_input[1 + BYTES_SEED_SE];
-    *shake_alg = frodokem_shake_alg();
-
-    shake_input[0] = 0x96;
-    memcpy(&shake_input[1], seedSE, BYTES_SEED_SE);
-    OP_hash_init(*shake_alg, st, SHA3_STATE_BYTES);
-    OP_hash_absorb(*shake_alg, st, SHA3_STATE_BYTES,
-                   shake_input, 1 + BYTES_SEED_SE);
-
-    // Squeeze Sp (full) — this must come first in the stream
-    OP_hash_squeeze(*shake_alg, st, SHA3_STATE_BYTES,
-                    (uint8_t *)Sp, (int)(PARAMS_N * PARAMS_NBAR * sizeof(uint16_t)));
-    for (size_t i = 0; i < (size_t)PARAMS_N * PARAMS_NBAR; i++)
-        Sp[i] = LE_TO_UINT16(Sp[i]);
-    frodo_sample_n(Sp, PARAMS_N * PARAMS_NBAR);
-
-    clear_bytes(shake_input, sizeof(shake_input));
-}
-
-// Squeeze one tile of Ep' (N_BAR × 8 uint16) from the SHAKE state, byte-swap and sample.
-static void frodo_squeeze_ep_tile(uint16_t ep_tile[8][8],
-                                  uint64_t st[FRODO_SHA3_STATE_U64],
-                                  uint8_t shake_alg, int col_block)
-{
-    (void)col_block;
-    OP_hash_squeeze(shake_alg, st, SHA3_STATE_BYTES,
-                    (uint8_t *)ep_tile, (int)(8 * PARAMS_NBAR * sizeof(uint16_t)));
-    for (int k = 0; k < 8 * PARAMS_NBAR; k++)
-        ((uint16_t *)ep_tile)[k] = LE_TO_UINT16(((uint16_t *)ep_tile)[k]);
-    frodo_sample_n((uint16_t *)ep_tile, (size_t)(8 * PARAMS_NBAR));
 }
 
 
@@ -230,42 +190,17 @@ int crypto_kem_enc_impl(unsigned char *ct, unsigned char *ss, const unsigned cha
 #endif
     shake(G2out, BYTES_SEED_SE + CRYPTO_BYTES, G2in, BYTES_PKHASH + BYTES_MU + BYTES_SALT);
 
-    // Generate Sp (full), Epp (tiny). Ep' is squeezed tile-by-tile for column-tiled Bp.
+    // Use original full-Bp approach (tiled frodo_mul_add_sa_tile debugged separately)
     {
-        uint64_t sp_st[FRODO_SHA3_STATE_U64];
-        uint8_t sp_alg;
-        frodo_gen_sp_init(sp_st, &sp_alg, Sp, seedSE);
-
-        // Column-tile Bp = Sp×A + Ep': process 8 columns at a time
-        const int c1_row_bytes = (int)(PARAMS_NBAR * PARAMS_LOGQ / 8);
-        for (int q_block = 0; q_block < PARAMS_N; q_block += 8) {
-            // Squeeze Ep' for these 8 columns
-            uint16_t ep_tile[8][8];
-            frodo_squeeze_ep_tile(ep_tile, sp_st, sp_alg, q_block);
-
-            // Initialize Bp_tile = ep_tile
-            uint16_t Bp_tile[8][8];
-            memcpy(Bp_tile, ep_tile, sizeof(Bp_tile));
-
-            // Compute Bp_tile = Bp_tile + Sp × A[:, q_block]
-            frodo_mul_add_sa_tile(Bp_tile, Sp, ep_tile, pk_seedA, q_block);
-
-            // Pack Bp_tile into ct_c1 — 8 columns of NBAR rows each
-            // frodo_pack packs in groups of 8 elements. One column block = NBAR rows × 8 cols.
-            // We pack 8 columns of NBAR elements each. For NBAR=8: 64 elements → 8 groups × 15 bytes
-            frodo_pack(ct_c1 + (size_t)q_block * c1_row_bytes,
-                       (size_t)c1_row_bytes * 8,
-                       (const uint16_t *)Bp_tile, 8 * PARAMS_NBAR, PARAMS_LOGQ);
+        uint16_t *Bp = calloc((size_t)PARAMS_N * PARAMS_NBAR, sizeof(uint16_t));
+        if (Bp == NULL) goto cleanup;
+        frodo_gen_sp_ep_epp(Sp, Bp, Epp, seedSE);
+        if (frodo_mul_add_sa_plus_e(Bp, Sp, pk_seedA) == 0) {
+            free(Bp);
+            goto cleanup;
         }
-
-        // Squeeze Epp (NBAR × NBAR = tiny)
-        OP_hash_squeeze(sp_alg, sp_st, (int)sizeof(sp_st),
-                        (uint8_t *)Epp, (int)(PARAMS_NBAR * PARAMS_NBAR * sizeof(uint16_t)));
-        for (size_t i = 0; i < (size_t)PARAMS_NBAR * PARAMS_NBAR; i++)
-            Epp[i] = LE_TO_UINT16(Epp[i]);
-        frodo_sample_n(Epp, PARAMS_NBAR * PARAMS_NBAR);
-
-        clear_bytes((uint8_t *)sp_st, sizeof(sp_st));
+        frodo_pack(ct_c1, (PARAMS_LOGQ*PARAMS_N*PARAMS_NBAR)/8, Bp, PARAMS_N*PARAMS_NBAR, PARAMS_LOGQ);
+        free(Bp);
     }
 
     // Compute V = Sp*B + Epp (B unpacked on the fly from pk_b)
@@ -378,31 +313,20 @@ int crypto_kem_dec_impl(unsigned char *ss, const unsigned char *ct, const unsign
                  (PARAMS_LOGQ*PARAMS_NBAR*PARAMS_NBAR)/8, PARAMS_LOGQ);
     memset(W, 0, PARAMS_NBAR * PARAMS_NBAR * sizeof(uint16_t));
     {
-        const size_t bp_row_bytes = (size_t)PARAMS_NBAR * PARAMS_LOGQ / 8;
+        const int c1_group_bytes = (int)(PARAMS_NBAR * PARAMS_LOGQ / 8);
+        const int c1_row_stride  = (int)(PARAMS_N / 8) * c1_group_bytes;
         for (int block = 0; block < PARAMS_N; block += 8) {
-            // Unpack Bp[0..NBAR-1][block..block+7] from ct_c1
-            // ct_c1 packs N x NBAR row-major: row r occupies bytes [r * bp_row_bytes * (N/NBAR)]
-            // Actually ct_c1 packs the N×NBAR flat array row-major.
-            // Each row of NBAR elements → NBAR * LOGQ / 8 bytes.
-            // For NBAR=8: each row = 15 bytes.
-            // The flat array is: row0[0..NBAR-1], row1[0..NBAR-1], ..., row[N-1][0..NBAR-1]
-            // Packed: groups of 8 consecutive elements → 15 bytes.
-            // Since NBAR=8, each row is exactly one group = 15 bytes.
-            // Columns block..block+7 span rows block..block+7, each row = 15 bytes.
-            uint16_t Bp_tile[8][8];  // 8 rows × 8 cols
+            int g = block / 8;
+            uint16_t Bp_tile[8][8];
             for (int r = 0; r < 8; r++) {
                 frodo_unpack(Bp_tile[r], 8,
-                             ct_c1 + (size_t)(block + r) * bp_row_bytes,
-                             (int)bp_row_bytes, PARAMS_LOGQ);
+                             ct_c1 + (size_t)r * c1_row_stride + (size_t)g * c1_group_bytes,
+                             c1_group_bytes, PARAMS_LOGQ);
             }
-
-            // Compute partial W += Bp_tile[8×8] × S[block..block+7][:]
             uint16_t x[8][8], y[8][8];
             for (int i = 0; i < 8; i++) {
                 for (int k = 0; k < 8; k++) {
                     x[i][k] = Bp_tile[i][k];
-                    // S is stored column-major: S[col][row]
-                    // y[k][i] = S[i][block+k] = sk_S[i*N + (block+k)] converted to native
                     y[k][i] = S[i * PARAMS_N + (block + k)];
                 }
             }
@@ -430,48 +354,17 @@ int crypto_kem_dec_impl(unsigned char *ss, const unsigned char *ct, const unsign
     memcpy(G2in_salt, salt, BYTES_SALT);
     shake(G2out, BYTES_SEED_SE + CRYPTO_BYTES, G2in, BYTES_PKHASH + BYTES_MU + BYTES_SALT);
 
-    // Generate Sp, Ep' (column-tiled into BBp) and Epp.
-    // The received Bp is no longer needed after the W computation above.
-    // BBp is computed column by column and compared with ct_c1 in packed form.
+    // Generate Sp, Ep' (into Bp) and Epp, then compute BBp = Sp*A + Ep'. Bp is reused.
     {
-        uint64_t sp_st[FRODO_SHA3_STATE_U64];
-        uint8_t sp_alg;
-        frodo_gen_sp_init(sp_st, &sp_alg, Sp, seedSEprime);
-
-        int8_t selector = 0;
-        const int c1_row_bytes = (int)(PARAMS_NBAR * PARAMS_LOGQ / 8);
-
-        // Process BBp column by column
-        for (int q_block = 0; q_block < PARAMS_N; q_block += 8) {
-            uint16_t ep_tile[8][8];
-            frodo_squeeze_ep_tile(ep_tile, sp_st, sp_alg, q_block);
-
-            uint16_t BBp_tile[8][8];
-            memcpy(BBp_tile, ep_tile, sizeof(BBp_tile));
-
-            frodo_mul_add_sa_tile(BBp_tile, Sp, ep_tile, pk_seedA, q_block);
-
-            // Reduce modulo q
-            for (int r = 0; r < PARAMS_NBAR; r++) {
-                for (int c = 0; c < 8; c++) {
-                    BBp_tile[r][c] &= ((1 << PARAMS_LOGQ) - 1);
-                }
-            }
-
-            // Compare with received ct_c1 in packed form
-            selector |= ct_verify_packed((const uint16_t *)BBp_tile,
-                                         ct_c1 + (size_t)q_block * c1_row_bytes,
-                                         8 * PARAMS_NBAR, PARAMS_LOGQ);
+        uint16_t *Bp = calloc((size_t)PARAMS_N * PARAMS_NBAR, sizeof(uint16_t));
+        if (Bp == NULL) goto cleanup;
+        frodo_gen_sp_ep_epp(Sp, Bp, Epp, seedSEprime);
+        if (frodo_mul_add_sa_plus_e(Bp, Sp, pk_seedA) == 0) {
+            free(Bp);
+            goto cleanup;
         }
-
-        // Squeeze Epp (tiny: NBAR×NBAR)
-        OP_hash_squeeze(sp_alg, sp_st, (int)sizeof(sp_st),
-                        (uint8_t *)Epp, (int)(PARAMS_NBAR * PARAMS_NBAR * sizeof(uint16_t)));
-        for (size_t i = 0; i < (size_t)PARAMS_NBAR * PARAMS_NBAR; i++)
-            Epp[i] = LE_TO_UINT16(Epp[i]);
-        frodo_sample_n(Epp, PARAMS_NBAR * PARAMS_NBAR);
-
-        clear_bytes((uint8_t *)sp_st, sizeof(sp_st));
+        // Reducing recomputed BBp (stored in Bp) modulo q
+        for (int i = 0; i < PARAMS_N*PARAMS_NBAR; i++) Bp[i] = Bp[i] & ((1 << PARAMS_LOGQ)-1);
 
         // Compute W = Sp*B + Epp (B unpacked on the fly from pk_b)
         frodo_mul_add_sb_plus_e(W, pk_b, Sp, Epp);
@@ -481,19 +374,19 @@ int crypto_kem_dec_impl(unsigned char *ss, const unsigned char *ct, const unsign
         frodo_add(CC, W, CC);
 
         // If (Bp == BBp & C == CC) then ss = F(ct || k'), else ss = F(ct || s)
-        selector |= ct_verify_packed(CC, ct_c2, PARAMS_NBAR*PARAMS_NBAR, PARAMS_LOGQ);
-
-        // If (selector == 0) then load k' to do ss = F(ct || k'), else if (selector == -1) load s
+        int8_t selector = ct_verify_packed(Bp, ct_c1, PARAMS_N*PARAMS_NBAR, PARAMS_LOGQ)
+                        | ct_verify_packed(CC, ct_c2, PARAMS_NBAR*PARAMS_NBAR, PARAMS_LOGQ);
         ct_select(fin_k, (uint8_t*)kprime, (uint8_t*)sk_s, CRYPTO_BYTES, selector);
-        // ss = F(ct || k): stream ct then the selected k through the incremental hash operator.
-        {
-            uint64_t f_state[FRODO_SHA3_STATE_U64];
-            uint8_t alg = frodokem_shake_alg();
-            OP_hash_init(alg, f_state, (int)sizeof(f_state));
-            OP_hash_absorb(alg, f_state, (int)sizeof(f_state), ct, (int)CRYPTO_CIPHERTEXTBYTES);
-            OP_hash_absorb(alg, f_state, (int)sizeof(f_state), fin_k, (int)CRYPTO_BYTES);
-            OP_hash_squeeze(alg, f_state, (int)sizeof(f_state), ss, (int)CRYPTO_BYTES);
-        }
+        free(Bp);
+    }
+    // ss = F(ct || k): stream ct then the selected k through the incremental hash operator.
+    {
+        uint64_t f_state[FRODO_SHA3_STATE_U64];
+        uint8_t alg = frodokem_shake_alg();
+        OP_hash_init(alg, f_state, (int)sizeof(f_state));
+        OP_hash_absorb(alg, f_state, (int)sizeof(f_state), ct, (int)CRYPTO_CIPHERTEXTBYTES);
+        OP_hash_absorb(alg, f_state, (int)sizeof(f_state), fin_k, (int)CRYPTO_BYTES);
+        OP_hash_squeeze(alg, f_state, (int)sizeof(f_state), ss, (int)CRYPTO_BYTES);
     }
     ret = 0;
 
