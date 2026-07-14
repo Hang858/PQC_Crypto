@@ -1,7 +1,6 @@
 #include "frodokem_params.h"
 #include "api.h"
 #include "fips202.h"
-#include "operator_interface.h"
 
 static void frodokem_shake128(uint8_t *output, size_t outlen, const uint8_t *input, size_t inlen) {
     shake128(output, outlen, input, inlen);

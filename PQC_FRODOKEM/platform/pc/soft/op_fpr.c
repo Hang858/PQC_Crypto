@@ -1,4 +1,4 @@
-#include "../operator_interface.h"
+#include "operator_interface.h"
 
 static void
 mul_u64(uint64_t a, uint64_t b, uint64_t *hi, uint64_t *lo)

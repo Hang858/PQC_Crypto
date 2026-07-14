@@ -4,8 +4,8 @@
 * Abstract: Key Encapsulation Mechanism (KEM) based on Frodo
 *********************************************************************************************/
 
-#include <string.h>
-#include <stdlib.h>
+#include "malloc.h"
+#include "memops.h"
 #include "fips202.h"
 #include "frodo_macrify.h"
 #include "random.h"
@@ -20,31 +20,37 @@
 // squeezed incrementally so Ep' can be written straight into the caller's Bp/BBp buffer
 // (ep_out) — no standalone Ep matrix is ever held. Byte-for-byte identical to the one-shot
 // expansion it replaces.
-static void frodo_gen_sp_ep_epp(uint16_t *Sp, uint16_t *ep_out, uint16_t *Epp, const uint8_t *seedSE)
+static int frodo_gen_sp_ep_epp(uint16_t *Sp, uint16_t *ep_out, uint16_t *Epp, const uint8_t *seedSE)
 {
     uint8_t shake_input[1 + BYTES_SEED_SE];
-    uint64_t st[FRODO_SHA3_STATE_U64];
+    uint64_t *st = malloc(FRODO_SHA3_STATE_U64 * sizeof(*st));
     uint8_t alg = frodokem_shake_alg();
+
+    if (st == NULL) {
+        return 0;
+    }
 
     shake_input[0] = 0x96;
     memcpy(&shake_input[1], seedSE, BYTES_SEED_SE);
-    OP_hash_init(alg, st, (int)sizeof(st));
-    OP_hash_absorb(alg, st, (int)sizeof(st), shake_input, 1 + BYTES_SEED_SE);
+    OP_hash_init(alg, st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*st)));
+    OP_hash_absorb(alg, st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*st)), shake_input, 1 + BYTES_SEED_SE);
 
-    OP_hash_squeeze(alg, st, (int)sizeof(st), (uint8_t *)Sp, (int)(PARAMS_N * PARAMS_NBAR * sizeof(uint16_t)));
+    OP_hash_squeeze(alg, st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*st)), (uint8_t *)Sp, (int)(PARAMS_N * PARAMS_NBAR * sizeof(uint16_t)));
     for (size_t i = 0; i < (size_t)PARAMS_N * PARAMS_NBAR; i++) Sp[i] = LE_TO_UINT16(Sp[i]);
     frodo_sample_n(Sp, PARAMS_N * PARAMS_NBAR);
 
-    OP_hash_squeeze(alg, st, (int)sizeof(st), (uint8_t *)ep_out, (int)(PARAMS_N * PARAMS_NBAR * sizeof(uint16_t)));
+    OP_hash_squeeze(alg, st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*st)), (uint8_t *)ep_out, (int)(PARAMS_N * PARAMS_NBAR * sizeof(uint16_t)));
     for (size_t i = 0; i < (size_t)PARAMS_N * PARAMS_NBAR; i++) ep_out[i] = LE_TO_UINT16(ep_out[i]);
     frodo_sample_n(ep_out, PARAMS_N * PARAMS_NBAR);
 
-    OP_hash_squeeze(alg, st, (int)sizeof(st), (uint8_t *)Epp, (int)(PARAMS_NBAR * PARAMS_NBAR * sizeof(uint16_t)));
+    OP_hash_squeeze(alg, st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*st)), (uint8_t *)Epp, (int)(PARAMS_NBAR * PARAMS_NBAR * sizeof(uint16_t)));
     for (size_t i = 0; i < (size_t)PARAMS_NBAR * PARAMS_NBAR; i++) Epp[i] = LE_TO_UINT16(Epp[i]);
     frodo_sample_n(Epp, PARAMS_NBAR * PARAMS_NBAR);
 
     clear_bytes(shake_input, sizeof(shake_input));
-    clear_bytes((uint8_t *)st, sizeof(st));
+    clear_bytes((uint8_t *)st, FRODO_SHA3_STATE_U64 * sizeof(*st));
+    free(st);
+    return 1;
 }
 
 
@@ -88,9 +94,12 @@ int crypto_kem_keypair_impl(unsigned char* pk, unsigned char* sk)
     memcpy(&shake_input_seedSE[1], randomness_seedSE, BYTES_SEED_SE);
     {
         uint8_t alg = frodokem_shake_alg();
-        uint64_t st[FRODO_SHA3_STATE_U64];
-        OP_hash_init(alg, st, (int)sizeof(st));
-        OP_hash_absorb(alg, st, (int)sizeof(st), shake_input_seedSE, 1 + BYTES_SEED_SE);
+        uint64_t *st = malloc(FRODO_SHA3_STATE_U64 * sizeof(*st));
+        if (st == NULL) {
+            goto cleanup;
+        }
+        OP_hash_init(alg, st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*st)));
+        OP_hash_absorb(alg, st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*st)), shake_input_seedSE, 1 + BYTES_SEED_SE);
 
         // Squeeze S tile-by-tile into sk_S
         uint16_t S_tile[64];  // 64 uint16 = 8 rows × 8 cols max
@@ -98,7 +107,7 @@ int crypto_kem_keypair_impl(unsigned char* pk, unsigned char* sk)
         const int num_tiles = (int)(PARAMS_N * PARAMS_NBAR / tile_elems);
 
         for (int t = 0; t < num_tiles; t++) {
-            OP_hash_squeeze(alg, st, (int)sizeof(st),
+            OP_hash_squeeze(alg, st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*st)),
                             (uint8_t *)S_tile, (int)(tile_elems * sizeof(uint16_t)));
             for (int k = 0; k < tile_elems; k++)
                 S_tile[k] = LE_TO_UINT16(S_tile[k]);
@@ -111,12 +120,14 @@ int crypto_kem_keypair_impl(unsigned char* pk, unsigned char* sk)
 
         // Now compute B = A×S + E using the LE-stored S, squeezing E incrementally
         if (frodo_mul_add_as_plus_e_from_sk(pk_b, sk_S, st, alg, pk_seedA) == 0) {
-            clear_bytes((uint8_t *)st, sizeof(st));
+            clear_bytes((uint8_t *)st, FRODO_SHA3_STATE_U64 * sizeof(*st));
+            free(st);
             goto cleanup;
         }
         // Note: E is fully consumed by frodo_mul_add_as_plus_e_from_sk
         // The SHAKE state is now exhausted (no more data to squeeze)
-        clear_bytes((uint8_t *)st, sizeof(st));
+        clear_bytes((uint8_t *)st, FRODO_SHA3_STATE_U64 * sizeof(*st));
+        free(st);
     }
 
     // Add s, pk and S to the secret key
@@ -194,7 +205,10 @@ int crypto_kem_enc_impl(unsigned char *ct, unsigned char *ss, const unsigned cha
     {
         uint16_t *Bp = calloc((size_t)PARAMS_N * PARAMS_NBAR, sizeof(uint16_t));
         if (Bp == NULL) goto cleanup;
-        frodo_gen_sp_ep_epp(Sp, Bp, Epp, seedSE);
+        if (frodo_gen_sp_ep_epp(Sp, Bp, Epp, seedSE) == 0) {
+            free(Bp);
+            goto cleanup;
+        }
         if (frodo_mul_add_sa_plus_e(Bp, Sp, pk_seedA) == 0) {
             free(Bp);
             goto cleanup;
@@ -215,12 +229,17 @@ int crypto_kem_enc_impl(unsigned char *ct, unsigned char *ss, const unsigned cha
     // through the incremental hash operator, avoiding a full ct||k copy buffer.
     memcpy(&ct[CRYPTO_CIPHERTEXTBYTES - BYTES_SALT], salt, BYTES_SALT);
     {
-        uint64_t f_state[FRODO_SHA3_STATE_U64];
+        uint64_t *f_state = malloc(FRODO_SHA3_STATE_U64 * sizeof(*f_state));
         uint8_t alg = frodokem_shake_alg();
-        OP_hash_init(alg, f_state, (int)sizeof(f_state));
-        OP_hash_absorb(alg, f_state, (int)sizeof(f_state), ct, (int)CRYPTO_CIPHERTEXTBYTES);
-        OP_hash_absorb(alg, f_state, (int)sizeof(f_state), k, (int)CRYPTO_BYTES);
-        OP_hash_squeeze(alg, f_state, (int)sizeof(f_state), ss, (int)CRYPTO_BYTES);
+        if (f_state == NULL) {
+            goto cleanup;
+        }
+        OP_hash_init(alg, f_state, (int)(FRODO_SHA3_STATE_U64 * sizeof(*f_state)));
+        OP_hash_absorb(alg, f_state, (int)(FRODO_SHA3_STATE_U64 * sizeof(*f_state)), ct, (int)CRYPTO_CIPHERTEXTBYTES);
+        OP_hash_absorb(alg, f_state, (int)(FRODO_SHA3_STATE_U64 * sizeof(*f_state)), k, (int)CRYPTO_BYTES);
+        OP_hash_squeeze(alg, f_state, (int)(FRODO_SHA3_STATE_U64 * sizeof(*f_state)), ss, (int)CRYPTO_BYTES);
+        clear_bytes((uint8_t *)f_state, FRODO_SHA3_STATE_U64 * sizeof(*f_state));
+        free(f_state);
     }
     ret = 0;
 
@@ -281,6 +300,11 @@ int crypto_kem_dec_impl(unsigned char *ss, const unsigned char *ct, const unsign
     uint8_t *seedSEprime = NULL;                                      // contains secret data
     uint8_t *kprime = NULL;                                           // contains secret data
     uint8_t fin_k[FRODOKEM_MAX_SHARED_SECRET_BYTES];                  // selected k for F, contains secret data
+    // Keccak/SHAKE contexts are 208 B each.  They are heap workspaces so
+    // the 4 KiB TS300 stack is reserved for call frames and small tiles.
+    uint64_t *sp_st = NULL;
+    uint64_t *ep_saved = NULL;
+    uint64_t *work_st = NULL;
     int ret = 1;
 
     if (W == NULL || C == NULL || CC == NULL ||
@@ -359,25 +383,31 @@ int crypto_kem_dec_impl(unsigned char *ss, const unsigned char *ct, const unsign
     // This eliminates the 10 KB Bp buffer at the cost of more SHAKE output.
     {
         uint8_t shake_input[1 + BYTES_SEED_SE];
-        uint64_t sp_st[FRODO_SHA3_STATE_U64], ep_saved[FRODO_SHA3_STATE_U64];
         uint8_t alg = frodokem_shake_alg();
         uint8_t discard[128];
         int i;
 
+        sp_st = malloc(FRODO_SHA3_STATE_U64 * sizeof(*sp_st));
+        ep_saved = malloc(FRODO_SHA3_STATE_U64 * sizeof(*ep_saved));
+        work_st = malloc(FRODO_SHA3_STATE_U64 * sizeof(*work_st));
+        if (sp_st == NULL || ep_saved == NULL || work_st == NULL) {
+            goto cleanup;
+        }
+
         shake_input[0] = 0x96;
         memcpy(&shake_input[1], seedSEprime, BYTES_SEED_SE);
-        OP_hash_init(alg, sp_st, (int)sizeof(sp_st));
-        OP_hash_absorb(alg, sp_st, (int)sizeof(sp_st), shake_input, 1 + BYTES_SEED_SE);
+        OP_hash_init(alg, sp_st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*sp_st)));
+        OP_hash_absorb(alg, sp_st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*sp_st)), shake_input, 1 + BYTES_SEED_SE);
 
         // Squeeze Sp (full)
-        OP_hash_squeeze(alg, sp_st, (int)sizeof(sp_st), (uint8_t *)Sp,
+        OP_hash_squeeze(alg, sp_st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*sp_st)), (uint8_t *)Sp,
                         (int)(PARAMS_N * PARAMS_NBAR * sizeof(uint16_t)));
         for (i = 0; i < (int)(PARAMS_N * PARAMS_NBAR); i++)
             Sp[i] = LE_TO_UINT16(Sp[i]);
         frodo_sample_n(Sp, PARAMS_N * PARAMS_NBAR);
 
         // Save SHAKE state so we can replay Ep' per column block
-        memcpy(ep_saved, sp_st, sizeof(ep_saved));
+        memcpy(ep_saved, sp_st, FRODO_SHA3_STATE_U64 * sizeof(*ep_saved));
 
         // Column-tile BBp = Sp×A + Ep': 8 columns at a time
         int8_t selector = 0;
@@ -385,10 +415,9 @@ int crypto_kem_dec_impl(unsigned char *ss, const unsigned char *ct, const unsign
         const int row_stride = (int)(PARAMS_N / 8) * g_bytes;
 
         for (int q = 0; q < PARAMS_N; q += 8) {
-            uint64_t work_st[FRODO_SHA3_STATE_U64];
             uint16_t ep_tile[8][8];
 
-            memcpy(work_st, ep_saved, sizeof(work_st));
+            memcpy(work_st, ep_saved, FRODO_SHA3_STATE_U64 * sizeof(*work_st));
 
             // Squeeze Ep' for one column block, row by row.
             // The SHAKE state is rewound to the start of Ep' for each q_block.
@@ -399,11 +428,11 @@ int crypto_kem_dec_impl(unsigned char *ss, const unsigned char *ct, const unsign
                 int skip_col = (int)(q * sizeof(uint16_t));
                 while (skip_col > 0) {
                     int n = (skip_col > (int)sizeof(discard)) ? (int)sizeof(discard) : skip_col;
-                    OP_hash_squeeze(alg, work_st, (int)sizeof(work_st), discard, n);
+                    OP_hash_squeeze(alg, work_st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*work_st)), discard, n);
                     skip_col -= n;
                 }
                 // Read 8 uint16 values for this row's tile
-                OP_hash_squeeze(alg, work_st, (int)sizeof(work_st),
+                OP_hash_squeeze(alg, work_st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*work_st)),
                                 (uint8_t *)&ep_tile[r][0], (int)(8 * sizeof(uint16_t)));
                 for (int c = 0; c < 8; c++)
                     ep_tile[r][c] = LE_TO_UINT16(ep_tile[r][c]);
@@ -413,7 +442,7 @@ int crypto_kem_dec_impl(unsigned char *ss, const unsigned char *ct, const unsign
                 int tail = (int)((PARAMS_N - q - 8) * sizeof(uint16_t));
                 while (tail > 0) {
                     int n = (tail > (int)sizeof(discard)) ? (int)sizeof(discard) : tail;
-                    OP_hash_squeeze(alg, work_st, (int)sizeof(work_st), discard, n);
+                    OP_hash_squeeze(alg, work_st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*work_st)), discard, n);
                     tail -= n;
                 }
             }
@@ -421,7 +450,9 @@ int crypto_kem_dec_impl(unsigned char *ss, const unsigned char *ct, const unsign
             // Compute BBp_tile = Sp × A[:, q] + ep_tile
             uint16_t BBp_tile[8][8];
             memcpy(BBp_tile, ep_tile, sizeof(BBp_tile));
-            frodo_mul_add_sa_tile(BBp_tile, Sp, ep_tile, pk_seedA, q);
+            if (frodo_mul_add_sa_tile(BBp_tile, Sp, ep_tile, pk_seedA, q) == 0) {
+                goto cleanup;
+            }
 
             // Reduce modulo q
             for (int r = 0; r < PARAMS_NBAR; r++)
@@ -439,16 +470,16 @@ int crypto_kem_dec_impl(unsigned char *ss, const unsigned char *ct, const unsign
         }
 
         // Squeeze Epp: from saved state, skip all Ep', then squeeze Epp
-        memcpy(sp_st, ep_saved, sizeof(sp_st));
+        memcpy(sp_st, ep_saved, FRODO_SHA3_STATE_U64 * sizeof(*sp_st));
         {
             int ep_bytes = (int)(PARAMS_N * PARAMS_NBAR * sizeof(uint16_t));
             while (ep_bytes > 0) {
                 int n = (ep_bytes > (int)sizeof(discard)) ? (int)sizeof(discard) : ep_bytes;
-                OP_hash_squeeze(alg, sp_st, (int)sizeof(sp_st), discard, n);
+                OP_hash_squeeze(alg, sp_st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*sp_st)), discard, n);
                 ep_bytes -= n;
             }
         }
-        OP_hash_squeeze(alg, sp_st, (int)sizeof(sp_st), (uint8_t *)Epp,
+        OP_hash_squeeze(alg, sp_st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*sp_st)), (uint8_t *)Epp,
                         (int)(PARAMS_NBAR * PARAMS_NBAR * sizeof(uint16_t)));
         for (i = 0; i < (int)(PARAMS_NBAR * PARAMS_NBAR); i++)
             Epp[i] = LE_TO_UINT16(Epp[i]);
@@ -466,22 +497,46 @@ int crypto_kem_dec_impl(unsigned char *ss, const unsigned char *ct, const unsign
         ct_select(fin_k, (uint8_t*)kprime, (uint8_t*)sk_s, CRYPTO_BYTES, selector);
 
         clear_bytes(shake_input, sizeof(shake_input));
-        clear_bytes((uint8_t *)ep_saved, sizeof(ep_saved));
-        clear_bytes((uint8_t *)sp_st, sizeof(sp_st));
+        clear_bytes((uint8_t *)work_st, FRODO_SHA3_STATE_U64 * sizeof(*work_st));
+        clear_bytes((uint8_t *)ep_saved, FRODO_SHA3_STATE_U64 * sizeof(*ep_saved));
+        clear_bytes((uint8_t *)sp_st, FRODO_SHA3_STATE_U64 * sizeof(*sp_st));
+        free(work_st);
+        free(ep_saved);
+        free(sp_st);
+        work_st = NULL;
+        ep_saved = NULL;
+        sp_st = NULL;
     }
     // ss = F(ct || k): stream ct then the selected k through the incremental hash operator.
     {
-        uint64_t f_state[FRODO_SHA3_STATE_U64];
+        uint64_t *f_state = malloc(FRODO_SHA3_STATE_U64 * sizeof(*f_state));
         uint8_t alg = frodokem_shake_alg();
-        OP_hash_init(alg, f_state, (int)sizeof(f_state));
-        OP_hash_absorb(alg, f_state, (int)sizeof(f_state), ct, (int)CRYPTO_CIPHERTEXTBYTES);
-        OP_hash_absorb(alg, f_state, (int)sizeof(f_state), fin_k, (int)CRYPTO_BYTES);
-        OP_hash_squeeze(alg, f_state, (int)sizeof(f_state), ss, (int)CRYPTO_BYTES);
+        if (f_state == NULL) {
+            goto cleanup;
+        }
+        OP_hash_init(alg, f_state, (int)(FRODO_SHA3_STATE_U64 * sizeof(*f_state)));
+        OP_hash_absorb(alg, f_state, (int)(FRODO_SHA3_STATE_U64 * sizeof(*f_state)), ct, (int)CRYPTO_CIPHERTEXTBYTES);
+        OP_hash_absorb(alg, f_state, (int)(FRODO_SHA3_STATE_U64 * sizeof(*f_state)), fin_k, (int)CRYPTO_BYTES);
+        OP_hash_squeeze(alg, f_state, (int)(FRODO_SHA3_STATE_U64 * sizeof(*f_state)), ss, (int)CRYPTO_BYTES);
+        clear_bytes((uint8_t *)f_state, FRODO_SHA3_STATE_U64 * sizeof(*f_state));
+        free(f_state);
     }
     ret = 0;
 
     // Cleanup:
 cleanup:
+    if (work_st != NULL) {
+        clear_bytes((uint8_t *)work_st, FRODO_SHA3_STATE_U64 * sizeof(*work_st));
+        free(work_st);
+    }
+    if (ep_saved != NULL) {
+        clear_bytes((uint8_t *)ep_saved, FRODO_SHA3_STATE_U64 * sizeof(*ep_saved));
+        free(ep_saved);
+    }
+    if (sp_st != NULL) {
+        clear_bytes((uint8_t *)sp_st, FRODO_SHA3_STATE_U64 * sizeof(*sp_st));
+        free(sp_st);
+    }
     if (W != NULL) {
         clear_bytes((uint8_t *)W, (size_t)PARAMS_NBAR * PARAMS_NBAR * sizeof(uint16_t));
     }

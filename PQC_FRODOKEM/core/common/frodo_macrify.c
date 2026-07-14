@@ -3,11 +3,11 @@
 *
 * Abstract: matrix arithmetic functions used by the KEM
 *********************************************************************************************/
-#include <stdlib.h>
-#include <string.h>
 #include "frodo_macrify.h"
 #include "operator_interface.h"
 #include "fips202.h"
+#include "malloc.h"
+#include "memops.h"
 
 
 int frodo_mul_add_as_plus_e(uint16_t *out, const uint16_t *s, const uint16_t *e, const uint8_t *seed_A)
@@ -26,7 +26,12 @@ int frodo_mul_add_as_plus_e(uint16_t *out, const uint16_t *s, const uint16_t *e,
     uint16_t* seed_A_origin = (uint16_t*)&seed_A_separated;
     memcpy(&seed_A_separated[2], seed_A, BYTES_SEED_A);
 
-    uint64_t a_state[8][FRODO_SHA3_STATE_U64];  // 8 SHAKE128 states, one per A row in the block
+    // Eight SHAKE states occupy 1,664 B. Keep this workspace off the
+    // embedded stack and reuse it for every row block in this invocation.
+    uint64_t (*a_state)[FRODO_SHA3_STATE_U64] = malloc(8 * sizeof(*a_state));
+    if (a_state == NULL) {
+        return 0;
+    }
 
     for (i = 0; i < PARAMS_N; i += 8) {
         for (int r = 0; r < 8; r++) {
@@ -55,6 +60,8 @@ int frodo_mul_add_as_plus_e(uint16_t *out, const uint16_t *s, const uint16_t *e,
 
             uint16_t z[8][8];
             if (OP_matrix_mul_8x8(z, (const uint16_t (*)[8])x, (const uint16_t (*)[8])y, (uint16_t)PARAMS_Q) != OP_SUCCESS) {
+                clear_bytes((uint8_t *)a_state, 8 * sizeof(*a_state));
+                free(a_state);
                 return 0;
             }
             for (int r = 0; r < 8; r++) {
@@ -71,6 +78,8 @@ int frodo_mul_add_as_plus_e(uint16_t *out, const uint16_t *s, const uint16_t *e,
         }
     }
 
+    clear_bytes((uint8_t *)a_state, 8 * sizeof(*a_state));
+    free(a_state);
     return 1;
 }
 
@@ -85,7 +94,12 @@ int frodo_mul_add_sa_plus_e(uint16_t *out, const uint16_t *s, const uint8_t *see
     uint16_t* seed_A_origin = (uint16_t*)&seed_A_separated;
     memcpy(&seed_A_separated[2], seed_A, BYTES_SEED_A);
 
-    uint64_t a_state[8][FRODO_SHA3_STATE_U64];  // 8 SHAKE128 states, one per A row in the block
+    // Eight SHAKE states occupy 1,664 B. Keep this workspace off the
+    // embedded stack and reuse it for every row block in this invocation.
+    uint64_t (*a_state)[FRODO_SHA3_STATE_U64] = malloc(8 * sizeof(*a_state));
+    if (a_state == NULL) {
+        return 0;
+    }
 
     for (i = 0; i < PARAMS_N; i += 8) {
         for (int r = 0; r < 8; r++) {
@@ -113,6 +127,8 @@ int frodo_mul_add_sa_plus_e(uint16_t *out, const uint16_t *s, const uint8_t *see
 
             uint16_t z[8][8];
             if (OP_matrix_mul_8x8(z, (const uint16_t (*)[8])x, (const uint16_t (*)[8])y, (uint16_t)PARAMS_Q) != OP_SUCCESS) {
+                clear_bytes((uint8_t *)a_state, 8 * sizeof(*a_state));
+                free(a_state);
                 return 0;
             }
             for (int r = 0; r < PARAMS_NBAR; r++) {
@@ -123,6 +139,8 @@ int frodo_mul_add_sa_plus_e(uint16_t *out, const uint16_t *s, const uint8_t *see
         }
     }
 
+    clear_bytes((uint8_t *)a_state, 8 * sizeof(*a_state));
+    free(a_state);
     return 1;
 }
 
@@ -263,7 +281,7 @@ void frodo_key_decode(uint16_t *out, const uint16_t *in)
 }
 
 
-void frodo_mul_add_sa_tile(uint16_t out_tile[8][8],
+int frodo_mul_add_sa_tile(uint16_t out_tile[8][8],
                            const uint16_t *s,
                            const uint16_t e_tile[8][8],
                            const uint8_t *seed_A,
@@ -278,9 +296,13 @@ void frodo_mul_add_sa_tile(uint16_t out_tile[8][8],
     memcpy(&seed_A_separated[2], seed_A, BYTES_SEED_A);
     uint16_t *seed_A_origin = (uint16_t *)&seed_A_separated;
 
+    uint64_t (*a_state)[FRODO_SHA3_STATE_U64] = malloc(8 * sizeof(*a_state));
+    if (a_state == NULL) {
+        return 0;
+    }
+
     for (i_block = 0; i_block < PARAMS_N; i_block += 8) {
         // Initialize 8 SHAKE128 states for A rows i_block .. i_block+7
-        uint64_t a_state[8][FRODO_SHA3_STATE_U64];
         for (int r = 0; r < 8; r++) {
             seed_A_origin[0] = UINT16_TO_LE((uint16_t)(i_block + r));
             OP_hash_init(OP_ALG_SHAKE128, a_state[r], (int)sizeof(a_state[r]));
@@ -315,14 +337,23 @@ void frodo_mul_add_sa_tile(uint16_t out_tile[8][8],
 
         // Multiply and accumulate
         uint16_t z[8][8];
-        OP_matrix_mul_8x8(z, (const uint16_t (*)[8])x, (const uint16_t (*)[8])y,
-                          (uint16_t)PARAMS_Q);
+        if (OP_matrix_mul_8x8(z, (const uint16_t (*)[8])x,
+                              (const uint16_t (*)[8])y,
+                              (uint16_t)PARAMS_Q) != OP_SUCCESS) {
+            clear_bytes((uint8_t *)a_state, 8 * sizeof(*a_state));
+            free(a_state);
+            return 0;
+        }
         for (int r = 0; r < PARAMS_NBAR; r++) {
             for (int c = 0; c < 8; c++) {
                 out_tile[r][c] = (uint16_t)(out_tile[r][c] + z[r][c]);
             }
         }
     }
+
+    clear_bytes((uint8_t *)a_state, 8 * sizeof(*a_state));
+    free(a_state);
+    return 1;
 }
 
 
@@ -341,6 +372,13 @@ int frodo_mul_add_as_plus_e_from_sk(uint8_t *pk_b,
     uint8_t seed_A_separated[2 + BYTES_SEED_A];
     memcpy(&seed_A_separated[2], seed_A, BYTES_SEED_A);
     uint16_t *seed_A_origin = (uint16_t *)&seed_A_separated;
+
+    // Eight SHAKE states occupy 1,664 B. Allocate them once and reuse them
+    // for every row block instead of putting them in this call frame.
+    uint64_t (*a_state)[FRODO_SHA3_STATE_U64] = malloc(8 * sizeof(*a_state));
+    if (a_state == NULL) {
+        return 0;
+    }
 
     for (i_block = 0; i_block < PARAMS_N; i_block += 8) {
         // Squeeze E[i_block] (8 rows x N_BAR cols) from the incremental SHAKE state
@@ -361,7 +399,6 @@ int frodo_mul_add_as_plus_e_from_sk(uint8_t *pk_b,
         }
 
         // Initialize 8 SHAKE128 states for A rows i_block .. i_block+7
-        uint64_t a_state[8][FRODO_SHA3_STATE_U64];
         for (int r = 0; r < 8; r++) {
             seed_A_origin[0] = UINT16_TO_LE((uint16_t)(i_block + r));
             OP_hash_init(OP_ALG_SHAKE128, a_state[r], (int)sizeof(a_state[r]));
@@ -396,6 +433,8 @@ int frodo_mul_add_as_plus_e_from_sk(uint8_t *pk_b,
             if (OP_matrix_mul_8x8(z, (const uint16_t (*)[8])x_tile,
                                   (const uint16_t (*)[8])S_tile,
                                   (uint16_t)PARAMS_Q) != OP_SUCCESS) {
+                clear_bytes((uint8_t *)a_state, 8 * sizeof(*a_state));
+                free(a_state);
                 return 0;
             }
             for (int r = 0; r < 8; r++) {
@@ -411,5 +450,7 @@ int frodo_mul_add_as_plus_e_from_sk(uint8_t *pk_b,
                    (const uint16_t *)B_acc, 8 * PARAMS_NBAR, PARAMS_LOGQ);
     }
 
+    clear_bytes((uint8_t *)a_state, 8 * sizeof(*a_state));
+    free(a_state);
     return 1;
 }

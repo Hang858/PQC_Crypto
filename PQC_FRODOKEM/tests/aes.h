@@ -6,7 +6,7 @@
 #define __AES_H
 
 #include <stdint.h>
-#include <stdlib.h>
+#include "malloc.h"
 
 
 /**

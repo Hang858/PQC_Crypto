@@ -35,19 +35,19 @@ void frodo_sub(uint16_t *out, const uint16_t *a, const uint16_t *b);
 void frodo_key_encode(uint16_t *out, const uint16_t *in);
 void frodo_key_decode(uint16_t *out, const uint16_t *in);
 
-// Low-memory column-tiled variant: computes one 8-column tile of (sÃ—A + e).
-// s:        N_BAR Ã— N matrix (full, native endian)
-// e_tile:   N_BAR Ã— 8 pre-sampled error slice for these columns (native endian)
+// Low-memory column-tiled variant: computes one 8-column tile of (s¡ÁA + e).
+// s:        N_BAR ¡Á N matrix (full, native endian)
+// e_tile:   N_BAR ¡Á 8 pre-sampled error slice for these columns (native endian)
 // seed_A:   seed for A matrix generation (column-block by column-block)
-// col_block: starting column index (0, 8, 16, â€¦)
-// out_tile: accumulator (N_BAR Ã— 8), initialized from e_tile by caller
-void frodo_mul_add_sa_tile(uint16_t out_tile[8][8],
+// col_block: starting column index (0, 8, 16, ¡­)
+// out_tile: accumulator (N_BAR ¡Á 8), initialized from e_tile by caller
+int frodo_mul_add_sa_tile(uint16_t out_tile[8][8],
                            const uint16_t *s,
                            const uint16_t e_tile[8][8],
                            const uint8_t *seed_A,
                            int col_block);
 
-// Low-memory keypair variant: computes B = AÃ—S + E row-block by row-block,
+// Low-memory keypair variant: computes B = A¡ÁS + E row-block by row-block,
 // packing each 8-row block into pk_b immediately. S is read from sk_S in
 // little-endian byte form, E is squeezed incrementally from the SHAKE state
 // (which must be positioned right after the S squeeze).

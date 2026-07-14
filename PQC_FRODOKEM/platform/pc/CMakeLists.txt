@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(PQC_FRODOKEM C)
 
+set(CMAKE_C_COMPILER clang)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
@@ -18,6 +19,8 @@ set(FRODOKEM_COMMON_SOURCES
     ${COMMON_PATH}/noise.c
     ${COMMON_PATH}/random.c
     ${COMMON_PATH}/util.c
+    ${COMMON_PATH}/malloc.c
+    ${COMMON_PATH}/memops.c
     ${CMAKE_CURRENT_SOURCE_DIR}/soft/endian.c
     ${CMAKE_CURRENT_SOURCE_DIR}/soft/op_hash.c
     ${CMAKE_CURRENT_SOURCE_DIR}/soft/op_matrix.c
@@ -28,6 +31,9 @@ set(FRODOKEM_COMMON_SOURCES
 )
 
 add_library(pqc_frodokem STATIC ${FRODOKEM_COMMON_SOURCES})
+target_compile_options(pqc_frodokem PRIVATE
+    -fstack-usage
+)
 
 target_compile_definitions(pqc_frodokem PRIVATE
     USE_HARDWARE_HASH
@@ -52,9 +58,17 @@ target_include_directories(test_frodokem_ref PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/soft
     ${CMAKE_CURRENT_SOURCE_DIR}/test
+    ${PROJECT_PATH}/tests
 )
 
 target_link_libraries(test_frodokem_ref PRIVATE pqc_frodokem)
+
+target_compile_options(test_frodokem_ref PRIVATE
+    -fstack-usage
+)
+
+enable_testing()
+add_test(NAME pqc_frodokem_ref COMMAND test_frodokem_ref)
 
 add_executable(test_frodokem_minimal
     ${CMAKE_CURRENT_SOURCE_DIR}/test/test_minimal.c
@@ -70,5 +84,20 @@ target_include_directories(test_frodokem_minimal PRIVATE
 
 target_link_libraries(test_frodokem_minimal PRIVATE pqc_frodokem)
 
-enable_testing()
-add_test(NAME pqc_frodokem_ref COMMAND test_frodokem_ref)
+add_executable(kat_runtime
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/kat_runtime.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/rng.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/aes_c.c
+)
+
+target_include_directories(kat_runtime PRIVATE
+    ${INCLUDE_PATH}
+    ${CORE_PATH}
+    ${COMMON_PATH}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/soft
+    ${CMAKE_CURRENT_SOURCE_DIR}/test
+    ${PROJECT_PATH}/tests
+)
+
+target_link_libraries(kat_runtime PRIVATE pqc_frodokem)
