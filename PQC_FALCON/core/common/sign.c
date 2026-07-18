@@ -29,6 +29,8 @@
  * @author   Thomas Pornin <thomas.pornin@nccgroup.com>
  */
 
+#include <stdlib.h>
+
 #include "inner.h"
 
 /* =================================================================== */
@@ -37,6 +39,16 @@
  * Compute degree N from logarithm 'logn'.
  */
 #define MKN(logn)   ((size_t)1 << (logn))
+
+static void
+clear_memory(void *ptr, size_t len)
+{
+	volatile uint8_t *p = ptr;
+
+	while (len -- > 0) {
+		*p ++ = 0;
+	}
+}
 
 /* =================================================================== */
 /*
@@ -328,92 +340,109 @@ typedef int (*samplerZ)(void *ctx, fpr mu, fpr sigma);
  * is written over (t0,t1). The Gram matrix is modified as well. The
  * tmp[] buffer must have room for four polynomials.
  */
-static void
+typedef struct {
+	fpr *t0;
+	fpr *t1;
+	fpr *g00;
+	fpr *g01;
+	fpr *g11;
+	fpr *tmp;
+	unsigned logn;
+	unsigned phase;
+} dyn_sampling_frame;
+
+#define DYN_SAMPLING_MAX_DEPTH   11
+
+/*
+ * Iterative equivalent of the recursive Falcon dynamic-tree sampler.  The
+ * recursion depth is logn (ten for Falcon-1024); keep those frames on the
+ * heap so the signing call path remains suitable for a small task stack.
+ */
+static int
 ffSampling_fft_dyntree(samplerZ samp, void *samp_ctx,
 	fpr *restrict t0, fpr *restrict t1,
 	fpr *restrict g00, fpr *restrict g01, fpr *restrict g11,
 	unsigned orig_logn, unsigned logn, fpr *restrict tmp)
 {
-	size_t n, hn;
-	fpr *z0, *z1;
+	dyn_sampling_frame stack[DYN_SAMPLING_MAX_DEPTH];
+	size_t depth;
 
-	/*
-	 * Deepest level: the LDL tree leaf value is just g00 (the
-	 * array has length only 1 at this point); we normalize it
-	 * with regards to sigma, then use it for sampling.
-	 */
-	if (logn == 0) {
-		fpr leaf;
-
-		leaf = g00[0];
-		leaf = fpr_mul(fpr_sqrt(leaf), fpr_inv_sigma[orig_logn]);
-		t0[0] = fpr_of(samp(samp_ctx, t0[0], leaf));
-		t1[0] = fpr_of(samp(samp_ctx, t1[0], leaf));
-		return;
+	if (logn >= DYN_SAMPLING_MAX_DEPTH) {
+		return 0;
 	}
+	stack[0] = (dyn_sampling_frame){
+		t0, t1, g00, g01, g11, tmp, logn, 0
+	};
+	depth = 0;
+	for (;;) {
+		dyn_sampling_frame *fr = &stack[depth];
+		size_t n, hn;
+		fpr *z0, *z1;
 
-	n = (size_t)1 << logn;
-	hn = n >> 1;
+		if (fr->logn == 0) {
+			fpr leaf;
 
-	/*
-	 * Decompose G into LDL. We only need d00 (identical to g00),
-	 * d11, and l10; we do that in place.
-	 */
-	Zf(poly_LDL_fft)(g00, g01, g11, logn);
+			leaf = fr->g00[0];
+			leaf = fpr_mul(fpr_sqrt(leaf), fpr_inv_sigma[orig_logn]);
+			fr->t0[0] = fpr_of(samp(samp_ctx, fr->t0[0], leaf));
+			fr->t1[0] = fpr_of(samp(samp_ctx, fr->t1[0], leaf));
+			if (depth == 0) {
+				break;
+			}
+			depth --;
+			continue;
+		}
 
-	/*
-	 * Split d00 and d11 and expand them into half-size quasi-cyclic
-	 * Gram matrices. We also save l10 in tmp[].
-	 */
-	Zf(poly_split_fft)(tmp, tmp + hn, g00, logn);
-	memcpy(g00, tmp, n * sizeof *tmp);
-	Zf(poly_split_fft)(tmp, tmp + hn, g11, logn);
-	memcpy(g11, tmp, n * sizeof *tmp);
-	memcpy(tmp, g01, n * sizeof *g01);
-	memcpy(g01, g00, hn * sizeof *g00);
-	memcpy(g01 + hn, g11, hn * sizeof *g00);
+		n = (size_t)1 << fr->logn;
+		hn = n >> 1;
+		if (fr->phase == 0) {
+			Zf(poly_LDL_fft)(fr->g00, fr->g01, fr->g11, fr->logn);
+			Zf(poly_split_fft)(fr->tmp, fr->tmp + hn, fr->g00, fr->logn);
+			memcpy(fr->g00, fr->tmp, n * sizeof *fr->tmp);
+			Zf(poly_split_fft)(fr->tmp, fr->tmp + hn, fr->g11, fr->logn);
+			memcpy(fr->g11, fr->tmp, n * sizeof *fr->tmp);
+			memcpy(fr->tmp, fr->g01, n * sizeof *fr->g01);
+			memcpy(fr->g01, fr->g00, hn * sizeof *fr->g00);
+			memcpy(fr->g01 + hn, fr->g11, hn * sizeof *fr->g00);
 
-	/*
-	 * The half-size Gram matrices for the recursive LDL tree
-	 * building are now:
-	 *   - left sub-tree: g00, g00+hn, g01
-	 *   - right sub-tree: g11, g11+hn, g01+hn
-	 * l10 is in tmp[].
-	 */
+			z1 = fr->tmp + n;
+			Zf(poly_split_fft)(z1, z1 + hn, fr->t1, fr->logn);
+			fr->phase = 1;
+			depth ++;
+			stack[depth] = (dyn_sampling_frame){
+				z1, z1 + hn, fr->g11, fr->g11 + hn, fr->g01 + hn,
+				z1 + n, fr->logn - 1, 0
+			};
+			continue;
+		}
+		if (fr->phase == 1) {
+			z1 = fr->tmp + n;
+			Zf(poly_merge_fft)(fr->tmp + (n << 1), z1, z1 + hn, fr->logn);
+			memcpy(z1, fr->t1, n * sizeof *fr->t1);
+			Zf(poly_sub)(z1, fr->tmp + (n << 1), fr->logn);
+			memcpy(fr->t1, fr->tmp + (n << 1), n * sizeof *fr->tmp);
+			Zf(poly_mul_fft)(fr->tmp, z1, fr->logn);
+			Zf(poly_add)(fr->t0, fr->tmp, fr->logn);
 
-	/*
-	 * We split t1 and use the first recursive call on the two
-	 * halves, using the right sub-tree. The result is merged
-	 * back into tmp + 2*n.
-	 */
-	z1 = tmp + n;
-	Zf(poly_split_fft)(z1, z1 + hn, t1, logn);
-	ffSampling_fft_dyntree(samp, samp_ctx, z1, z1 + hn,
-		g11, g11 + hn, g01 + hn, orig_logn, logn - 1, z1 + n);
-	Zf(poly_merge_fft)(tmp + (n << 1), z1, z1 + hn, logn);
+			z0 = fr->tmp;
+			Zf(poly_split_fft)(z0, z0 + hn, fr->t0, fr->logn);
+			fr->phase = 2;
+			depth ++;
+			stack[depth] = (dyn_sampling_frame){
+				z0, z0 + hn, fr->g00, fr->g00 + hn, fr->g01,
+				z0 + n, fr->logn - 1, 0
+			};
+			continue;
+		}
 
-	/*
-	 * Compute tb0 = t0 + (t1 - z1) * l10.
-	 * At that point, l10 is in tmp, t1 is unmodified, and z1 is
-	 * in tmp + (n << 1). The buffer in z1 is free.
-	 *
-	 * In the end, z1 is written over t1, and tb0 is in t0.
-	 */
-	memcpy(z1, t1, n * sizeof *t1);
-	Zf(poly_sub)(z1, tmp + (n << 1), logn);
-	memcpy(t1, tmp + (n << 1), n * sizeof *tmp);
-	Zf(poly_mul_fft)(tmp, z1, logn);
-	Zf(poly_add)(t0, tmp, logn);
-
-	/*
-	 * Second recursive invocation, on the split tb0 (currently in t0)
-	 * and the left sub-tree.
-	 */
-	z0 = tmp;
-	Zf(poly_split_fft)(z0, z0 + hn, t0, logn);
-	ffSampling_fft_dyntree(samp, samp_ctx, z0, z0 + hn,
-		g00, g00 + hn, g01, orig_logn, logn - 1, z0 + n);
-	Zf(poly_merge_fft)(t0, z0, z0 + hn, logn);
+		z0 = fr->tmp;
+		Zf(poly_merge_fft)(fr->t0, z0, z0 + hn, fr->logn);
+		if (depth == 0) {
+			break;
+		}
+		depth --;
+	}
+	return 1;
 }
 
 /*
@@ -772,7 +801,8 @@ static int
 do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	const int8_t *restrict f, const int8_t *restrict g,
 	const int8_t *restrict F, const int8_t *restrict G,
-	const uint16_t *hm, unsigned logn, fpr *restrict tmp)
+	const uint16_t *hm, const uint8_t *sk, size_t sk_len,
+	unsigned logn, fpr *restrict tmp)
 {
 	size_t n, u;
 	fpr *t0, *t1, *tx, *ty;
@@ -885,8 +915,51 @@ do_sign_dyn(samplerZ samp, void *samp_ctx, int16_t *s2,
 	/*
 	 * Apply sampling; result is written over (t0,t1).
 	 */
-	ffSampling_fft_dyntree(samp, samp_ctx,
-		t0, t1, g00, g01, g11, logn, logn, t1 + n);
+	if (!ffSampling_fft_dyntree(samp, samp_ctx,
+		t0, t1, g00, g01, g11, logn, logn, t1 + n))
+	{
+		return -1;
+	}
+
+	/*
+	 * The dynamic sampler has consumed the whole 72*N-byte workspace.
+	 * Reload f, g, F and G in its final 4*N bytes before rebuilding the
+	 * basis below.  This lets the NIST wrapper reuse the workspace instead
+	 * of retaining a separate 4*N-byte private-key buffer.
+	 */
+	f = (const int8_t *)((uint8_t *)tmp + (68 * n));
+	g = f + n;
+	F = g + n;
+	G = F + n;
+	{
+		size_t u, v;
+		int8_t *rf = (int8_t *)((uint8_t *)tmp + (68 * n));
+		int8_t *rg = rf + n;
+		int8_t *rF = rg + n;
+		int8_t *rG = rF + n;
+
+		u = 1;
+		v = Zf(trim_i8_decode)(rf, logn, Zf(max_fg_bits)[logn],
+			sk + u, sk_len - u);
+		if (v == 0) {
+			return -1;
+		}
+		u += v;
+		v = Zf(trim_i8_decode)(rg, logn, Zf(max_fg_bits)[logn],
+			sk + u, sk_len - u);
+		if (v == 0) {
+			return -1;
+		}
+		u += v;
+		v = Zf(trim_i8_decode)(rF, logn, Zf(max_FG_bits)[logn],
+			sk + u, sk_len - u);
+		if (v == 0 || u + v != sk_len) {
+			return -1;
+		}
+		if (!Zf(complete_private)(rG, rf, rg, rF, logn, (uint8_t *)tmp)) {
+			return -1;
+		}
+	}
 
 	/*
 	 * We arrange the layout back to:
@@ -1181,14 +1254,21 @@ Zf(sampler)(void *ctx, fpr mu, fpr isigma)
 }
 
 /* see inner.h */
-void
+int
 Zf(sign_tree)(int16_t *sig, inner_shake256_context *rng,
 	const fpr *restrict expanded_key,
 	const uint16_t *hm, unsigned logn, uint8_t *tmp)
 {
 	fpr *ftmp;
+	sampler_context *spc;
+	samplerZ samp;
+	void *samp_ctx;
 
 	ftmp = (fpr *)tmp;
+	spc = malloc(sizeof *spc);
+	if (spc == NULL) {
+		return 0;
+	}
 	for (;;) {
 		/*
 		 * Signature produces short vectors s1 and s2. The
@@ -1200,18 +1280,14 @@ Zf(sign_tree)(int16_t *sig, inner_shake256_context *rng,
 		 * (the verifier recomputes s1 from s2, the hashed message,
 		 * and the public key).
 		 */
-		sampler_context spc;
-		samplerZ samp;
-		void *samp_ctx;
-
 		/*
 		 * Normal sampling. We use a fast PRNG seeded from our
 		 * SHAKE context ('rng').
 		 */
-		spc.sigma_min = fpr_sigma_min[logn];
-		Zf(prng_init)(&spc.p, rng);
+		spc->sigma_min = fpr_sigma_min[logn];
+		Zf(prng_init)(&spc->p, rng);
 		samp = Zf(sampler);
-		samp_ctx = &spc;
+		samp_ctx = spc;
 
 		/*
 		 * Do the actual signature.
@@ -1222,16 +1298,24 @@ Zf(sign_tree)(int16_t *sig, inner_shake256_context *rng,
 			break;
 		}
 	}
+	clear_memory(spc, sizeof *spc);
+	free(spc);
+	return 1;
 }
 
 /* see inner.h */
-void
+int
 Zf(sign_dyn)(int16_t *sig, inner_shake256_context *rng,
 	const int8_t *restrict f, const int8_t *restrict g,
 	const int8_t *restrict F, const int8_t *restrict G,
-	const uint16_t *hm, unsigned logn, uint8_t *tmp)
+	const uint16_t *hm, const uint8_t *sk, size_t sk_len,
+	unsigned logn, uint8_t *tmp, void *sampler_ctx)
 {
 	fpr *ftmp;
+	sampler_context *spc = sampler_ctx;
+	samplerZ samp;
+	void *samp_ctx;
+	int r;
 
 	ftmp = (fpr *)tmp;
 	for (;;) {
@@ -1245,26 +1329,26 @@ Zf(sign_dyn)(int16_t *sig, inner_shake256_context *rng,
 		 * (the verifier recomputes s1 from s2, the hashed message,
 		 * and the public key).
 		 */
-		sampler_context spc;
-		samplerZ samp;
-		void *samp_ctx;
-
 		/*
 		 * Normal sampling. We use a fast PRNG seeded from our
 		 * SHAKE context ('rng').
 		 */
-		spc.sigma_min = fpr_sigma_min[logn];
-		Zf(prng_init)(&spc.p, rng);
+		spc->sigma_min = fpr_sigma_min[logn];
+		Zf(prng_init)(&spc->p, rng);
 		samp = Zf(sampler);
-		samp_ctx = &spc;
+		samp_ctx = spc;
 
 		/*
 		 * Do the actual signature.
 		 */
-		if (do_sign_dyn(samp, samp_ctx, sig,
-			f, g, F, G, hm, logn, ftmp))
-		{
+		r = do_sign_dyn(samp, samp_ctx, sig,
+			f, g, F, G, hm, sk, sk_len, logn, ftmp);
+		if (r < 0) {
+			return 0;
+		}
+		if (r != 0) {
 			break;
 		}
 	}
+	return 1;
 }

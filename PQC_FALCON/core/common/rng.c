@@ -94,12 +94,17 @@ Zf(prng_refill)(prng *p)
 	 */
 	cc = *(uint64_t *)(p->state.d + 48);
 	for (u = 0; u < 8; u ++) {
-		uint32_t state[16];
+		/*
+		 * Keep this small ChaCha state as volatile. Besides preventing
+		 * sensitive state from being kept in vector registers, this keeps
+		 * compilers from unrolling eight copies of it onto a small stack.
+		 */
+		volatile uint32_t state[16];
 		size_t v;
 		int i;
 
-		memcpy(&state[0], CW, sizeof CW);
-		memcpy(&state[4], p->state.d, 48);
+		memcpy((void *)&state[0], CW, sizeof CW);
+		memcpy((void *)&state[4], p->state.d, 48);
 		state[14] ^= (uint32_t)cc;
 		state[15] ^= (uint32_t)(cc >> 32);
 		for (i = 0; i < 10; i ++) {

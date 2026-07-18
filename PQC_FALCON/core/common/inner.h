@@ -481,7 +481,8 @@ typedef struct {
 	} buf;
 	size_t ptr;
 	union {
-		uint8_t d[256];
+		/* ChaCha20 uses a 48-byte key/IV and an 8-byte counter. */
+		uint8_t d[56];
 		uint64_t dummy_u64;
 	} state;
 	int type;
@@ -787,8 +788,9 @@ void Zf(expand_privkey)(fpr *restrict expanded_key,
  *
  * tmp[] must have 64-bit alignment.
  * This function uses floating-point rounding (see set_fpu_cw()).
+ * It returns 1 on success, or 0 if its heap allocation fails.
  */
-void Zf(sign_tree)(int16_t *sig, inner_shake256_context *rng,
+int Zf(sign_tree)(int16_t *sig, inner_shake256_context *rng,
 	const fpr *restrict expanded_key,
 	const uint16_t *hm, unsigned logn, uint8_t *tmp);
 
@@ -808,11 +810,13 @@ void Zf(sign_tree)(int16_t *sig, inner_shake256_context *rng,
  *
  * tmp[] must have 64-bit alignment.
  * This function uses floating-point rounding (see set_fpu_cw()).
+ * It returns 1 on success, or 0 if private-key reconstruction fails.
  */
-void Zf(sign_dyn)(int16_t *sig, inner_shake256_context *rng,
+int Zf(sign_dyn)(int16_t *sig, inner_shake256_context *rng,
 	const int8_t *restrict f, const int8_t *restrict g,
 	const int8_t *restrict F, const int8_t *restrict G,
-	const uint16_t *hm, unsigned logn, uint8_t *tmp);
+	const uint16_t *hm, const uint8_t *sk, size_t sk_len,
+	unsigned logn, uint8_t *tmp, void *spc);
 
 /*
  * Internal sampler engine. Exported for tests.
