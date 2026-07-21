@@ -1286,6 +1286,11 @@ Zf(sign_tree)(int16_t *sig, inner_shake256_context *rng,
 		 */
 		spc->sigma_min = fpr_sigma_min[logn];
 		Zf(prng_init)(&spc->p, rng);
+		if (inner_shake256_is_failed(rng)) {
+			clear_memory(spc, sizeof *spc);
+			free(spc);
+			return 0;
+		}
 		samp = Zf(sampler);
 		samp_ctx = spc;
 
@@ -1335,6 +1340,9 @@ Zf(sign_dyn)(int16_t *sig, inner_shake256_context *rng,
 		 */
 		spc->sigma_min = fpr_sigma_min[logn];
 		Zf(prng_init)(&spc->p, rng);
+		if (inner_shake256_is_failed(rng)) {
+			return 0;
+		}
 		samp = Zf(sampler);
 		samp_ctx = spc;
 

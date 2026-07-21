@@ -117,6 +117,12 @@ typedef struct {
 		uint8_t dbuf[200];
 	} st;
 	uint64_t dptr;
+#ifdef USE_HARDWARE_HASH
+	/* Cache one SHAKE256 rate block to amortize small operator calls. */
+	uint8_t outbuf[136];
+	size_t outptr;
+	int failed;
+#endif
 } inner_shake256_context;
 
 #define inner_shake256_init      Zf(i_shake256_init)
@@ -132,6 +138,17 @@ void Zf(i_shake256_flip)(
 	inner_shake256_context *sc);
 void Zf(i_shake256_extract)(
 	inner_shake256_context *sc, uint8_t *out, size_t len);
+
+static inline int
+inner_shake256_is_failed(const inner_shake256_context *sc)
+{
+#ifdef USE_HARDWARE_HASH
+	return sc->failed;
+#else
+	(void)sc;
+	return 0;
+#endif
+}
 
 /*
  */
@@ -750,8 +767,9 @@ void Zf(poly_merge_fft)(fpr *restrict f,
  *
  * tmp[] must have 64-bit alignment.
  * This function uses floating-point rounding (see set_fpu_cw()).
+ * It returns 1 on success, or 0 if the RNG backend fails.
  */
-void Zf(keygen)(inner_shake256_context *rng,
+int Zf(keygen)(inner_shake256_context *rng,
 	int8_t *f, int8_t *g, int8_t *F, int8_t *G, uint16_t *h,
 	unsigned logn, uint8_t *tmp);
 
@@ -788,7 +806,7 @@ void Zf(expand_privkey)(fpr *restrict expanded_key,
  *
  * tmp[] must have 64-bit alignment.
  * This function uses floating-point rounding (see set_fpu_cw()).
- * It returns 1 on success, or 0 if its heap allocation fails.
+ * It returns 1 on success, or 0 if allocation or the RNG backend fails.
  */
 int Zf(sign_tree)(int16_t *sig, inner_shake256_context *rng,
 	const fpr *restrict expanded_key,
@@ -810,7 +828,8 @@ int Zf(sign_tree)(int16_t *sig, inner_shake256_context *rng,
  *
  * tmp[] must have 64-bit alignment.
  * This function uses floating-point rounding (see set_fpu_cw()).
- * It returns 1 on success, or 0 if private-key reconstruction fails.
+ * It returns 1 on success, or 0 if private-key reconstruction or the
+ * RNG backend fails.
  */
 int Zf(sign_dyn)(int16_t *sig, inner_shake256_context *rng,
 	const int8_t *restrict f, const int8_t *restrict g,

@@ -4071,7 +4071,7 @@ solve_NTRU(unsigned logn, int8_t *F, int8_t *G,
  * Generate a random polynomial with a Gaussian distribution. This function
  * also makes sure that the resultant of the polynomial with phi is odd.
  */
-static void
+static int
 poly_small_mkgauss(RNG_CONTEXT *rng, int8_t *f, unsigned logn)
 {
 	size_t n, u;
@@ -4084,6 +4084,9 @@ poly_small_mkgauss(RNG_CONTEXT *rng, int8_t *f, unsigned logn)
 
 	restart:
 		s = mkgauss(rng, logn);
+		if (inner_shake256_is_failed(rng)) {
+			return 0;
+		}
 
 		/*
 		 * We need the coefficient to fit within -127..+127;
@@ -4109,10 +4112,11 @@ poly_small_mkgauss(RNG_CONTEXT *rng, int8_t *f, unsigned logn)
 		}
 		f[u] = (int8_t)s;
 	}
+	return 1;
 }
 
 /* see falcon.h */
-void
+int
 Zf(keygen)(inner_shake256_context *rng,
 	int8_t *f, int8_t *g, int8_t *F, int8_t *G, uint16_t *h,
 	unsigned logn, uint8_t *tmp)
@@ -4174,8 +4178,11 @@ Zf(keygen)(inner_shake256_context *rng,
 		 * (i.e. the resultant of the polynomial with phi
 		 * will be odd).
 		 */
-		poly_small_mkgauss(rc, f, logn);
-		poly_small_mkgauss(rc, g, logn);
+		if (!poly_small_mkgauss(rc, f, logn)
+			|| !poly_small_mkgauss(rc, g, logn))
+		{
+			return 0;
+		}
 
 		/*
 		 * Verify that all coefficients are within the bounds
@@ -4270,4 +4277,5 @@ Zf(keygen)(inner_shake256_context *rng,
 		 */
 		break;
 	}
+	return 1;
 }
