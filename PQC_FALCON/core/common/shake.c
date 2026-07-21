@@ -34,13 +34,6 @@
 #include "inner.h"
 #include "operator_interface.h"
 
-#ifdef USE_HARDWARE_HASH
-/* Keep the operator-facing state layout and length unchanged (200 + 8). */
-#define SHAKE256_OP_STATE_SIZE \
-	((int)(sizeof ((inner_shake256_context *)0)->st \
-		+ sizeof ((inner_shake256_context *)0)->dptr))
-#endif
-
 #ifndef USE_HARDWARE_HASH
 
 /*
@@ -499,9 +492,8 @@ void
 Zf(i_shake256_init)(inner_shake256_context *sc)
 {
 #ifdef USE_HARDWARE_HASH
-	sc->failed = OP_hash_init(OP_ALG_SHAKE256, sc,
-		SHAKE256_OP_STATE_SIZE) != OP_SUCCESS;
-	sc->outptr = sizeof sc->outbuf;
+	/* Keep the real operator's original 208-byte context ABI. */
+	(void)OP_hash_init(OP_ALG_SHAKE256, sc, (int)sizeof *sc);
 #else
 	sc->dptr = 0;
 
@@ -520,22 +512,13 @@ Zf(i_shake256_inject)(inner_shake256_context *sc, const uint8_t *in, size_t len)
 #ifdef USE_HARDWARE_HASH
 	while (len > 0) {
 		size_t clen;
-		int r;
-
-		if (sc->failed) {
-			return;
-		}
 
 		clen = len;
 		if (clen > (size_t)INT32_MAX) {
 			clen = (size_t)INT32_MAX;
 		}
-		r = OP_hash_absorb(OP_ALG_SHAKE256, sc,
-			SHAKE256_OP_STATE_SIZE, in, (int)clen);
-		if (r != OP_SUCCESS) {
-			sc->failed = 1;
-			return;
-		}
+		(void)OP_hash_absorb(OP_ALG_SHAKE256, sc,
+			(int)sizeof *sc, in, (int)clen);
 		in += clen;
 		len -= clen;
 	}
@@ -597,27 +580,12 @@ Zf(i_shake256_extract)(inner_shake256_context *sc, uint8_t *out, size_t len)
 	while (len > 0) {
 		size_t clen;
 
-		if (sc->failed) {
-			memset(out, 0, len);
-			return;
+		clen = len;
+		if (clen > (size_t)INT32_MAX) {
+			clen = (size_t)INT32_MAX;
 		}
-		if (sc->outptr == sizeof sc->outbuf) {
-			if (OP_hash_squeeze(OP_ALG_SHAKE256, sc,
-				SHAKE256_OP_STATE_SIZE, sc->outbuf,
-				(int)sizeof sc->outbuf) != OP_SUCCESS)
-			{
-				sc->failed = 1;
-				memset(out, 0, len);
-				return;
-			}
-			sc->outptr = 0;
-		}
-		clen = sizeof sc->outbuf - sc->outptr;
-		if (clen > len) {
-			clen = len;
-		}
-		memcpy(out, sc->outbuf + sc->outptr, clen);
-		sc->outptr += clen;
+		(void)OP_hash_squeeze(OP_ALG_SHAKE256, sc,
+			(int)sizeof *sc, out, (int)clen);
 		out += clen;
 		len -= clen;
 	}

@@ -117,12 +117,6 @@ typedef struct {
 		uint8_t dbuf[200];
 	} st;
 	uint64_t dptr;
-#ifdef USE_HARDWARE_HASH
-	/* Cache one SHAKE256 rate block to amortize small operator calls. */
-	uint8_t outbuf[136];
-	size_t outptr;
-	int failed;
-#endif
 } inner_shake256_context;
 
 #define inner_shake256_init      Zf(i_shake256_init)
@@ -142,12 +136,8 @@ void Zf(i_shake256_extract)(
 static inline int
 inner_shake256_is_failed(const inner_shake256_context *sc)
 {
-#ifdef USE_HARDWARE_HASH
-	return sc->failed;
-#else
 	(void)sc;
 	return 0;
-#endif
 }
 
 /*

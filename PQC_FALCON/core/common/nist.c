@@ -11,6 +11,7 @@
 #include "inner.h"
 
 #define NONCELEN 40
+#define FALCON_WORK_ALIGN 8u
 
 /*
  * The NIST API is used on targets with a small task stack.  In particular,
@@ -29,6 +30,35 @@ falcon_keygen_tmp_size(unsigned logn)
     default:
         return 0;
     }
+}
+
+/*
+ * Falcon's FFT and key-generation scratch areas require 64-bit alignment.
+ * Some embedded allocators used by the T300 build only provide 4-byte
+ * alignment, so reserve a few extra bytes and align the workspace here.
+ * The original allocation is retained for clearing and free().
+ */
+static uint8_t *
+falcon_alloc_workspace(size_t len, void **base, size_t *base_len)
+{
+    uint8_t *raw;
+    uintptr_t addr;
+    size_t alloc_len;
+
+    if (len > SIZE_MAX - (FALCON_WORK_ALIGN - 1u)) {
+        return NULL;
+    }
+    alloc_len = len + (FALCON_WORK_ALIGN - 1u);
+    raw = malloc(alloc_len);
+    if (raw == NULL) {
+        return NULL;
+    }
+    memset(raw, 0, alloc_len);
+    addr = ((uintptr_t)raw + (FALCON_WORK_ALIGN - 1u))
+        & ~(uintptr_t)(FALCON_WORK_ALIGN - 1u);
+    *base = raw;
+    *base_len = alloc_len;
+    return (uint8_t *)addr;
 }
 
 static void
@@ -52,13 +82,14 @@ int randombytes(unsigned char *x, unsigned long long xlen);
 
 int crypto_sign_keypair(falcon_level_t level, unsigned char *pk, unsigned char *sk) {
     const falcon_params_t *params = Falcon_get_params(level);
+    void *work_base = NULL;
     uint8_t *work = NULL;
     uint8_t *tmp;
     int8_t *fgF;
     uint16_t *h;
     unsigned char seed[48];
     inner_shake256_context *rng;
-    size_t n, tmp_len, work_len;
+    size_t n, tmp_len, work_len, work_base_len = 0;
     size_t u, v;
     unsigned savcw;
     int ret = -1;
@@ -72,7 +103,7 @@ int crypto_sign_keypair(falcon_level_t level, unsigned char *pk, unsigned char *
         return -1;
     }
     work_len = tmp_len + (3 * n) + (n * sizeof *h) + sizeof *rng;
-    work = malloc(work_len);
+    work = falcon_alloc_workspace(work_len, &work_base, &work_base_len);
     if (work == NULL) {
         goto cleanup;
     }
@@ -129,13 +160,14 @@ int crypto_sign_keypair(falcon_level_t level, unsigned char *pk, unsigned char *
 
     ret = 0;
 cleanup:
-    falcon_free_sensitive(work, work_len);
+    falcon_free_sensitive(work_base, work_base_len);
     return ret;
 }
 
 int crypto_sign(falcon_level_t level, unsigned char *sm, unsigned long long *smlen,
     const unsigned char *m, unsigned long long mlen, const unsigned char *sk) {
     const falcon_params_t *params = Falcon_get_params(level);
+    void *work_base = NULL;
     uint8_t *work = NULL;
     uint8_t *tmp;
     int8_t *fgFG;
@@ -145,7 +177,7 @@ int crypto_sign(falcon_level_t level, unsigned char *sm, unsigned long long *sml
     unsigned char seed[48], nonce[NONCELEN];
     inner_shake256_context *sc;
     sampler_context *spc;
-    size_t n, tmp_len, work_len;
+    size_t n, tmp_len, work_len, work_base_len = 0;
     size_t u, v, sig_len;
     unsigned savcw;
     int ret = -1;
@@ -164,7 +196,7 @@ int crypto_sign(falcon_level_t level, unsigned char *sm, unsigned long long *sml
     n = (size_t)1 << params->logn;
     tmp_len = 72 * n;
     work_len = tmp_len + (n * sizeof *sig) + sizeof *spc + sizeof *sc;
-    work = malloc(work_len);
+    work = falcon_alloc_workspace(work_len, &work_base, &work_base_len);
     if (work == NULL) {
         goto cleanup;
     }
@@ -249,20 +281,21 @@ int crypto_sign(falcon_level_t level, unsigned char *sm, unsigned long long *sml
     *smlen = 2 + NONCELEN + mlen + sig_len;
     ret = 0;
 cleanup:
-    falcon_free_sensitive(work, work_len);
+    falcon_free_sensitive(work_base, work_base_len);
     return ret;
 }
 
 int crypto_sign_open(falcon_level_t level, unsigned char *m, unsigned long long *mlen,
     const unsigned char *sm, unsigned long long smlen, const unsigned char *pk) {
     const falcon_params_t *params = Falcon_get_params(level);
+    void *work_base = NULL;
     uint8_t *work = NULL;
     uint8_t *tmp;
     const unsigned char *esig;
     uint16_t *hhm;
     int16_t *sig;
     inner_shake256_context *sc;
-    size_t n, work_len;
+    size_t n, work_len, work_base_len = 0;
     size_t sig_len, msg_len;
     int ret = -1;
 
@@ -280,7 +313,7 @@ int crypto_sign_open(falcon_level_t level, unsigned char *m, unsigned long long 
     n = (size_t)1 << params->logn;
     work_len = (2 * n) + (2 * n * sizeof *hhm)
         + (n * sizeof *sig) + sizeof *sc;
-    work = malloc(work_len);
+    work = falcon_alloc_workspace(work_len, &work_base, &work_base_len);
     if (work == NULL) {
         goto cleanup;
     }
@@ -332,6 +365,6 @@ int crypto_sign_open(falcon_level_t level, unsigned char *m, unsigned long long 
     *mlen = msg_len;
     ret = 0;
 cleanup:
-    falcon_free_sensitive(work, work_len);
+    falcon_free_sensitive(work_base, work_base_len);
     return ret;
 }
