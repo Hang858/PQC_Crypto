@@ -85,11 +85,11 @@ void reed_solomon_encode(uint64_t *cdw, const uint64_t *msg) {
     size_t i, j, k;
     uint8_t gate_value = 0;
 
-    uint16_t *tmp = calloc(HQC_MAX_G, sizeof(uint16_t));
+    uint16_t *tmp = calloc(PARAM_G, sizeof(uint16_t));
     const uint16_t *rs_poly = HQC_active_params()->rs_poly;
 
-    uint8_t *msg_bytes = calloc(HQC_MAX_K, sizeof(uint8_t));
-    uint8_t *cdw_bytes = calloc(HQC_MAX_N1, sizeof(uint8_t));
+    uint8_t *msg_bytes = calloc(PARAM_K, sizeof(uint8_t));
+    uint8_t *cdw_bytes = calloc(PARAM_N1, sizeof(uint8_t));
     if (tmp == NULL || msg_bytes == NULL || cdw_bytes == NULL) {
         free(tmp);
         free(msg_bytes);
@@ -153,8 +153,8 @@ static uint16_t compute_elp(uint16_t *sigma, const uint16_t *syndromes) {
     uint16_t deg_sigma = 0;
     uint16_t deg_sigma_p = 0;
     uint16_t deg_sigma_copy = 0;
-    uint16_t *sigma_copy = calloc(HQC_MAX_DELTA + 1, sizeof(uint16_t));
-    uint16_t *X_sigma_p = calloc(HQC_MAX_DELTA + 1, sizeof(uint16_t));
+    uint16_t *sigma_copy = calloc(PARAM_DELTA + 1, sizeof(uint16_t));
+    uint16_t *X_sigma_p = calloc(PARAM_DELTA + 1, sizeof(uint16_t));
     uint16_t pp = (uint16_t)-1;  // 2*rho
     uint16_t d_p = 1;
     uint16_t d = syndromes[0];
@@ -284,8 +284,8 @@ static void compute_z_poly(uint16_t *z, const uint16_t *sigma, const uint16_t de
  * @param[in] error Array storing the error
  */
 static void compute_error_values(uint16_t *error_values, const uint16_t *z, const uint8_t *error) {
-    uint16_t *beta_j = calloc(HQC_MAX_DELTA, sizeof(uint16_t));
-    uint16_t *e_j = calloc(HQC_MAX_DELTA, sizeof(uint16_t));
+    uint16_t *beta_j = calloc(PARAM_DELTA, sizeof(uint16_t));
+    uint16_t *e_j = calloc(PARAM_DELTA, sizeof(uint16_t));
 
     uint16_t delta_counter;
     uint16_t delta_real_value;
@@ -380,12 +380,12 @@ static void correct_errors(uint8_t *cdw, const uint16_t *error_values) {
  * @param[in] cdw Array of size VEC_N1_SIZE_64 storing the received word
  */
 void reed_solomon_decode(uint64_t *msg, uint64_t *cdw) {
-    uint8_t *cdw_bytes = calloc(HQC_MAX_N1, sizeof(uint8_t));
-    uint16_t *syndromes = calloc(2 * HQC_MAX_DELTA, sizeof(uint16_t));
-    uint16_t *sigma = calloc((size_t)1 << HQC_MAX_FFT, sizeof(uint16_t));
+    uint8_t *cdw_bytes = calloc(PARAM_N1, sizeof(uint8_t));
+    uint16_t *syndromes = calloc(2 * PARAM_DELTA, sizeof(uint16_t));
+    uint16_t *sigma = calloc((size_t)1 << PARAM_FFT, sizeof(uint16_t));
     uint8_t *error = calloc((size_t)1 << PARAM_M, sizeof(uint8_t));
-    uint16_t *z = calloc(HQC_MAX_N1, sizeof(uint16_t));
-    uint16_t *error_values = calloc(HQC_MAX_N1, sizeof(uint16_t));
+    uint16_t *z = calloc(PARAM_DELTA + 1, sizeof(uint16_t));
+    uint16_t *error_values = calloc(PARAM_N1, sizeof(uint16_t));
     uint16_t deg;
     if (cdw_bytes == NULL || syndromes == NULL || sigma == NULL || error == NULL || z == NULL ||
         error_values == NULL) {
@@ -480,7 +480,7 @@ void reed_solomon_decode(uint64_t *msg, uint64_t *cdw) {
     // Zeroize sensitive data
 cleanup:
     if (cdw_bytes != NULL) {
-        memset_zero(cdw_bytes, HQC_MAX_N1);
+        memset_zero(cdw_bytes, PARAM_N1);
     }
     free(cdw_bytes);
     free(syndromes);

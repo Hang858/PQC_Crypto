@@ -78,6 +78,6 @@ void xof_get_bytes(shake256_xof_ctx *xof_ctx, uint8_t *output, uint32_t output_s
 void hash_g(uint8_t *output, const uint8_t h_ek[SEED_BYTES], const uint8_t *m, const uint8_t salt[SALT_BYTES]);
 void hash_h(uint8_t *output, const uint8_t *pk);
 void hash_i(uint8_t *output, const uint8_t *seed);
-void hash_j(uint8_t *output, const uint8_t h_ek[SEED_BYTES], const uint8_t *sigma, const ciphertext_kem_t *c_kem);
+void hash_j(uint8_t *output, const uint8_t h_ek[SEED_BYTES], const uint8_t *sigma, const uint8_t *c_kem);
 
 #endif  // HQC_SYMMETRIC_H

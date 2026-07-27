@@ -117,6 +117,22 @@ typedef struct {
 		uint8_t dbuf[200];
 	} st;
 	uint64_t dptr;
+#ifdef USE_HARDWARE_HASH
+	/*
+	 * The T300 SHAKE engine exposes one complete SHAKE256 rate block at a
+	 * time.  Keep that hardware-facing granularity here and serve Falcon's
+	 * frequent 2-byte and 8-byte requests from this cache.
+	 *
+	 * This field deliberately follows the original 208-byte operator state;
+	 * only the prefix through dptr is passed to OP_hash_*().
+	 */
+	union {
+		uint8_t d[136];
+		uint64_t dummy_u64;
+	} outbuf;
+	size_t outptr;
+	int failed;
+#endif
 } inner_shake256_context;
 
 #define inner_shake256_init      Zf(i_shake256_init)
@@ -136,8 +152,12 @@ void Zf(i_shake256_extract)(
 static inline int
 inner_shake256_is_failed(const inner_shake256_context *sc)
 {
+#ifdef USE_HARDWARE_HASH
+	return sc->failed;
+#else
 	(void)sc;
 	return 0;
+#endif
 }
 
 /*

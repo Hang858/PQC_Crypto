@@ -11,6 +11,7 @@
 
 #include "fft.h"
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include "gf.h"
 #include "parameters.h"
@@ -176,10 +177,12 @@ static void fft_rec(uint16_t *w, uint16_t *f, size_t f_coeffs, uint8_t m, uint32
     uint16_t f1[1 << (HQC_MAX_FFT - 2)] = {0};
     uint16_t gammas[PARAM_M - 2] = {0};
     uint16_t deltas[PARAM_M - 2] = {0};
-    uint16_t gammas_sums[1 << (PARAM_M - 2)] = {0};
-    uint16_t u[1 << (PARAM_M - 2)] = {0};
-    uint16_t v[1 << (PARAM_M - 2)] = {0};
     uint16_t tmp[PARAM_M] = {0};
+    uint16_t *workspace;
+    uint16_t *gammas_sums;
+    uint16_t *u;
+    uint16_t *v;
+    const size_t half_field_size = (size_t)1 << (PARAM_M - 2);
 
     uint16_t beta_m_pow;
     size_t i, j, k;
@@ -202,6 +205,18 @@ static void fft_rec(uint16_t *w, uint16_t *f, size_t f_coeffs, uint8_t m, uint32
 
         return;
     }
+
+    /* These three half-field arrays dominate the recursive stack frame.
+     * Allocate one compact workspace per active recursion level so the HQC
+     * decoder remains safe with a 2--3 KB task stack. */
+    workspace = calloc(3 * half_field_size, sizeof(uint16_t));
+    if (workspace == NULL) {
+        memset(w, 0, ((size_t)1 << m) * sizeof(uint16_t));
+        return;
+    }
+    gammas_sums = workspace;
+    u = workspace + half_field_size;
+    v = workspace + 2 * half_field_size;
 
     // Step 2: compute g
     if (betas[m - 1] != 1) {
@@ -250,6 +265,7 @@ static void fft_rec(uint16_t *w, uint16_t *f, size_t f_coeffs, uint8_t m, uint32
             w[k + i] ^= w[i];
         }
     }
+    free(workspace);
 }
 
 /**
@@ -273,14 +289,25 @@ static void fft_rec(uint16_t *w, uint16_t *f, size_t f_coeffs, uint8_t m, uint32
  */
 void fft(uint16_t *w, const uint16_t *f, size_t f_coeffs) {
     uint16_t betas[PARAM_M - 1] = {0};
-    uint16_t betas_sums[1 << (PARAM_M - 1)] = {0};
     uint16_t f0[1 << (HQC_MAX_FFT - 1)] = {0};
     uint16_t f1[1 << (HQC_MAX_FFT - 1)] = {0};
     uint16_t deltas[PARAM_M - 1] = {0};
-    uint16_t u[1 << (PARAM_M - 1)] = {0};
-    uint16_t v[1 << (PARAM_M - 1)] = {0};
+    uint16_t *workspace;
+    uint16_t *betas_sums;
+    uint16_t *u;
+    uint16_t *v;
+    const size_t half_field_size = (size_t)1 << (PARAM_M - 1);
 
     size_t i, k;
+
+    workspace = calloc(3 * half_field_size, sizeof(uint16_t));
+    if (workspace == NULL) {
+        memset(w, 0, ((size_t)1 << PARAM_M) * sizeof(uint16_t));
+        return;
+    }
+    betas_sums = workspace;
+    u = workspace + half_field_size;
+    v = workspace + 2 * half_field_size;
 
     // Follows Gao and Mateer algorithm
     compute_fft_betas(betas);
@@ -319,6 +346,7 @@ void fft(uint16_t *w, const uint16_t *f, size_t f_coeffs) {
         w[i] = u[i] ^ gf_mul(betas_sums[i], v[i]);
         w[k + i] ^= w[i];
     }
+    free(workspace);
 }
 
 /**

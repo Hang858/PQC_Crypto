@@ -31,13 +31,20 @@ void hqc_dk_pke_from_string(uint64_t *y, const uint8_t *dk_pke) {
  * @param[out] s        Pointer to the output buffer for `s` the second internal component of the key.
  * @param[in]  ek_pke   Pointer to the serialized encryption key.
  */
-void hqc_ek_pke_from_string(uint64_t *h, uint64_t *s, const uint8_t *ek_pke) {
+void hqc_ek_pke_h_from_string(uint64_t *h, const uint8_t *ek_pke) {
     shake256_xof_ctx ek_xof_ctx = {0};
 
     xof_init(&ek_xof_ctx, ek_pke, SEED_BYTES);
     vect_set_random(&ek_xof_ctx, h);
+}
 
+void hqc_ek_pke_s_from_string(uint64_t *s, const uint8_t *ek_pke) {
     memcpy(s, ek_pke + SEED_BYTES, VEC_N_SIZE_BYTES);
+}
+
+void hqc_ek_pke_from_string(uint64_t *h, uint64_t *s, const uint8_t *ek_pke) {
+    hqc_ek_pke_h_from_string(h, ek_pke);
+    hqc_ek_pke_s_from_string(s, ek_pke);
 }
 
 /**

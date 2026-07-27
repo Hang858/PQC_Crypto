@@ -26,7 +26,7 @@
  * @param[in] m Pointer to an array that is the message
  */
 void code_encode(uint64_t *em, const uint64_t *m) {
-    uint64_t *tmp = calloc(HQC_MAX_VEC_N1_SIZE_64, sizeof(uint64_t));
+    uint64_t *tmp = calloc(VEC_N1_SIZE_64, sizeof(uint64_t));
     if (tmp == NULL) {
         return;
     }
@@ -41,7 +41,7 @@ void code_encode(uint64_t *em, const uint64_t *m) {
     vect_print(em, VEC_N1N2_SIZE_BYTES);
 #endif
     // Zeroize sensitive data
-    memset_zero(tmp, HQC_MAX_VEC_N1_SIZE_64 * sizeof(uint64_t));
+    memset_zero(tmp, VEC_N1_SIZE_64 * sizeof(uint64_t));
     free(tmp);
 }
 
@@ -52,7 +52,7 @@ void code_encode(uint64_t *em, const uint64_t *m) {
  * @param[in] em Pointer to an array that is the code word
  */
 void code_decode(uint64_t *m, const uint64_t *em) {
-    uint64_t *tmp = calloc(HQC_MAX_VEC_N1_SIZE_64, sizeof(uint64_t));
+    uint64_t *tmp = calloc(VEC_N1_SIZE_64, sizeof(uint64_t));
     if (tmp == NULL) {
         return;
     }
@@ -66,6 +66,6 @@ void code_decode(uint64_t *m, const uint64_t *em) {
 #endif
 
     // Zeroize sensitive data
-    memset_zero(tmp, HQC_MAX_VEC_N1_SIZE_64 * sizeof(uint64_t));
+    memset_zero(tmp, VEC_N1_SIZE_64 * sizeof(uint64_t));
     free(tmp);
 }

@@ -29,10 +29,43 @@
  * @author   Thomas Pornin <thomas.pornin@nccgroup.com>
  */
 
+#include <stddef.h>
 #include <string.h>
 
 #include "inner.h"
 #include "operator_interface.h"
+
+#ifdef USE_HARDWARE_HASH
+
+/* SHAKE256 rate and the unchanged operator-state ABI. */
+#define SHAKE256_RATE          136
+#define SHAKE256_OP_STATE_SIZE 208
+
+/*
+ * The PC software operator follows OP_SUCCESS == 0.  The T300 SHA3 driver
+ * uses SHA3_OK (0x55AAAA55) instead.  Accept the platform's native success
+ * value without changing the operator interface.
+ */
+static int
+hash_op_succeeded(uint32_t r)
+{
+	if (r == (uint32_t)OP_SUCCESS) {
+		return 1;
+	}
+#ifdef SHA3_OK
+	if (r == (uint32_t)SHA3_OK) {
+		return 1;
+	}
+#endif
+	return 0;
+}
+
+/* Ensure that adding the software cache did not change the state prefix. */
+typedef char shake256_operator_state_must_be_208_bytes[
+	(offsetof(inner_shake256_context, outbuf) == SHAKE256_OP_STATE_SIZE)
+		? 1 : -1];
+
+#endif
 
 #ifndef USE_HARDWARE_HASH
 
@@ -492,8 +525,12 @@ void
 Zf(i_shake256_init)(inner_shake256_context *sc)
 {
 #ifdef USE_HARDWARE_HASH
-	/* Keep the real operator's original 208-byte context ABI. */
-	(void)OP_hash_init(OP_ALG_SHAKE256, sc, (int)sizeof *sc);
+	uint32_t r;
+
+	r = (uint32_t)OP_hash_init(OP_ALG_SHAKE256, sc,
+		SHAKE256_OP_STATE_SIZE);
+	sc->failed = !hash_op_succeeded(r);
+	sc->outptr = sizeof sc->outbuf.d;
 #else
 	sc->dptr = 0;
 
@@ -512,13 +549,22 @@ Zf(i_shake256_inject)(inner_shake256_context *sc, const uint8_t *in, size_t len)
 #ifdef USE_HARDWARE_HASH
 	while (len > 0) {
 		size_t clen;
+		uint32_t r;
+
+		if (sc->failed) {
+			return;
+		}
 
 		clen = len;
 		if (clen > (size_t)INT32_MAX) {
 			clen = (size_t)INT32_MAX;
 		}
-		(void)OP_hash_absorb(OP_ALG_SHAKE256, sc,
-			(int)sizeof *sc, in, (int)clen);
+		r = (uint32_t)OP_hash_absorb(OP_ALG_SHAKE256, sc,
+			SHAKE256_OP_STATE_SIZE, in, (int)clen);
+		if (!hash_op_succeeded(r)) {
+			sc->failed = 1;
+			return;
+		}
 		in += clen;
 		len -= clen;
 	}
@@ -580,12 +626,29 @@ Zf(i_shake256_extract)(inner_shake256_context *sc, uint8_t *out, size_t len)
 	while (len > 0) {
 		size_t clen;
 
-		clen = len;
-		if (clen > (size_t)INT32_MAX) {
-			clen = (size_t)INT32_MAX;
+		if (sc->failed) {
+			memset(out, 0, len);
+			return;
 		}
-		(void)OP_hash_squeeze(OP_ALG_SHAKE256, sc,
-			(int)sizeof *sc, out, (int)clen);
+		if (sc->outptr == sizeof sc->outbuf.d) {
+			uint32_t r;
+
+			r = (uint32_t)OP_hash_squeeze(OP_ALG_SHAKE256, sc,
+				SHAKE256_OP_STATE_SIZE, sc->outbuf.d,
+				SHAKE256_RATE);
+			if (!hash_op_succeeded(r)) {
+				sc->failed = 1;
+				memset(out, 0, len);
+				return;
+			}
+			sc->outptr = 0;
+		}
+		clen = sizeof sc->outbuf.d - sc->outptr;
+		if (clen > len) {
+			clen = len;
+		}
+		memcpy(out, sc->outbuf.d + sc->outptr, clen);
+		sc->outptr += clen;
 		out += clen;
 		len -= clen;
 	}

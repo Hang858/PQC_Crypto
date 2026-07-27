@@ -25,11 +25,10 @@ int scloud_kemkeygen(uint8_t *pk, uint8_t *sk)
 }
 int scloud_kemencaps(uint8_t *pk, uint8_t *ctx, uint8_t *ss)
 {
-	uint8_t *kc = (uint8_t *)malloc(sizeof(uint8_t) * (SCLOUDPLUS_CTX + 32));
+	uint8_t *kc = NULL;
 	uint8_t *m = (uint8_t *)malloc(SCLOUDPLUS_SS + 32);
 	uint8_t *rk = (uint8_t *)malloc(64);
-	if (kc == NULL || m == NULL || rk == NULL) {
-		free(kc);
+	if (m == NULL || rk == NULL) {
 		free(m);
 		free(rk);
 		return -1;
@@ -39,6 +38,12 @@ int scloud_kemencaps(uint8_t *pk, uint8_t *ctx, uint8_t *ss)
 	scloudplus_G(rk, m, SCLOUDPLUS_SS + 32);
 	if (scloudplus_pkeenc(pk, m, rk, ctx) != 0) {
 		free(kc);
+		free(m);
+		free(rk);
+		return -1;
+	}
+	kc = (uint8_t *)malloc(sizeof(uint8_t) * (SCLOUDPLUS_CTX + 32));
+	if (kc == NULL) {
 		free(m);
 		free(rk);
 		return -1;
@@ -55,21 +60,25 @@ int scloud_kemdecaps(uint8_t *sk, uint8_t *ctx, uint8_t *ss)
 {
 	uint8_t *m = (uint8_t *)malloc(SCLOUDPLUS_SS + 32);
 	uint8_t *rk = (uint8_t *)malloc(64);
-	uint8_t *ctx1 = (uint8_t *)malloc(sizeof(uint8_t) * (SCLOUDPLUS_CTX + 32));
-	if (m == NULL || rk == NULL || ctx1 == NULL) {
+	uint8_t *ctx1 = NULL;
+	if (m == NULL || rk == NULL) {
 		free(m);
 		free(rk);
-		free(ctx1);
 		return -1;
 	}
 	if (scloudplus_pkedec(sk, ctx, m) != 0) {
 		free(m);
 		free(rk);
-		free(ctx1);
 		return -1;
 	}
 	memcpy(m + SCLOUDPLUS_SS, sk + SCLOUDPLUS_PKE_SK + SCLOUDPLUS_PK, 32);
 	scloudplus_G(rk, m, SCLOUDPLUS_SS + 32);
+	ctx1 = (uint8_t *)malloc(sizeof(uint8_t) * (SCLOUDPLUS_CTX + 32));
+	if (ctx1 == NULL) {
+		free(m);
+		free(rk);
+		return -1;
+	}
 	if (scloudplus_pkeenc(sk + SCLOUDPLUS_PKE_SK, m, rk, ctx1 + 32) != 0) {
 		free(m);
 		free(rk);

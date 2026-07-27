@@ -11,4 +11,5 @@ void scloudplus_sampleeta2(uint8_t *seed, uint16_t *matrixe1,
 						   uint16_t *matrixe2);
 void scloudplus_samplepsi(uint8_t *seed, uint16_t *matrixs);
 void scloudplus_samplephi(uint8_t *seed, uint16_t *matrixs);
+void readu8tom(uint8_t *in, int n, uint16_t *out, int *outlen);
 #endif

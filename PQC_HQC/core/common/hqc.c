@@ -108,20 +108,17 @@ cleanup:
 void hqc_pke_encrypt(ciphertext_pke_t *c_pke, const uint8_t *ek_pke, const uint64_t *m, const uint8_t *theta) {
     shake256_xof_ctx theta_xof_ctx = {0};
     uint64_t *h = calloc(VEC_N_SIZE_64, sizeof(uint64_t));
-    uint64_t *s = calloc(VEC_N_SIZE_64, sizeof(uint64_t));
+    uint64_t *s = NULL;
     uint64_t *r1 = calloc(VEC_N_SIZE_64, sizeof(uint64_t));
     uint64_t *r2 = calloc(VEC_N_SIZE_64, sizeof(uint64_t));
     uint64_t *e = calloc(VEC_N_SIZE_64, sizeof(uint64_t));
-    uint64_t *tmp = calloc(VEC_N_SIZE_64, sizeof(uint64_t));
-    if (h == NULL || s == NULL || r1 == NULL || r2 == NULL || e == NULL || tmp == NULL) {
+    uint64_t *tmp = NULL;
+    if (h == NULL || r1 == NULL || r2 == NULL || e == NULL) {
         goto cleanup;
     }
 
     // Initialize Xof using theta
     xof_init(&theta_xof_ctx, theta, SEED_BYTES);
-
-    // Retrieve h and s from public key
-    hqc_ek_pke_from_string(h, s, ek_pke);
 
     // Generate re, e and r1
     vect_sample_fixed_weight2(&theta_xof_ctx, r2, PARAM_OMEGA_R);
@@ -129,8 +126,26 @@ void hqc_pke_encrypt(ciphertext_pke_t *c_pke, const uint8_t *ek_pke, const uint6
     vect_sample_fixed_weight2(&theta_xof_ctx, r1, PARAM_OMEGA_R);
 
     // Compute u = r1 + r2.h
+    hqc_ek_pke_h_from_string(h, ek_pke);
     vect_mul(c_pke->u, r2, h);
     vect_add(c_pke->u, r1, c_pke->u, VEC_N_SIZE_64);
+
+    // h and r1 are no longer needed.  Releasing them before allocating s
+    // and tmp removes two full PARAM_N vectors from the peak live set.
+#ifndef VERBOSE
+    memset_zero(r1, VEC_N_SIZE_64 * sizeof(uint64_t));
+    free(r1);
+    r1 = NULL;
+    free(h);
+    h = NULL;
+#endif
+
+    s = calloc(VEC_N_SIZE_64, sizeof(uint64_t));
+    tmp = calloc(VEC_N_SIZE_64, sizeof(uint64_t));
+    if (s == NULL || tmp == NULL) {
+        goto cleanup;
+    }
+    hqc_ek_pke_s_from_string(s, ek_pke);
 
     // Compute v = C.encode(m)
     code_encode(c_pke->v, m);
@@ -198,12 +213,10 @@ cleanup:
 uint8_t hqc_pke_decrypt(uint64_t *m, const uint8_t *dk_pke, const ciphertext_pke_t *c_pke) {
     uint64_t *y = calloc(VEC_N_SIZE_64, sizeof(uint64_t));
     uint64_t *tmp1 = calloc(VEC_N_SIZE_64, sizeof(uint64_t));
-    uint64_t *tmp2 = calloc(VEC_N_SIZE_64, sizeof(uint64_t));
-    if (y == NULL || tmp1 == NULL || tmp2 == NULL) {
-        free(y);
-        free(tmp1);
-        free(tmp2);
-        return 1;
+    uint64_t *tmp2 = NULL;
+    uint8_t result = 1;
+    if (y == NULL || tmp1 == NULL) {
+        goto cleanup;
     }
 
     // Parse decryption key dk_pke
@@ -213,6 +226,17 @@ uint8_t hqc_pke_decrypt(uint64_t *m, const uint8_t *dk_pke, const ciphertext_pke
     vect_mul(tmp1, y, c_pke->u);
     // Truncate(u.y)
     vect_truncate(tmp1);
+
+#ifndef VERBOSE
+    memset_zero(y, VEC_N_SIZE_64 * sizeof(uint64_t));
+    free(y);
+    y = NULL;
+#endif
+
+    tmp2 = calloc(VEC_N1N2_SIZE_64, sizeof(uint64_t));
+    if (tmp2 == NULL) {
+        goto cleanup;
+    }
     // Compute v - Truncate(u.y)
     vect_add(tmp2, c_pke->v, tmp1, VEC_N1N2_SIZE_64);
 
@@ -231,14 +255,22 @@ uint8_t hqc_pke_decrypt(uint64_t *m, const uint8_t *dk_pke, const ciphertext_pke
 
     // Compute plaintext m
     code_decode(m, tmp2);
+    result = 0;
 
     // Zeroize sensitive data
-    memset_zero(y, VEC_N_SIZE_64 * sizeof(uint64_t));
-    memset_zero(tmp1, VEC_N_SIZE_64 * sizeof(uint64_t));
-    memset_zero(tmp2, VEC_N_SIZE_64 * sizeof(uint64_t));
+cleanup:
+    if (y != NULL) {
+        memset_zero(y, VEC_N_SIZE_64 * sizeof(uint64_t));
+    }
+    if (tmp1 != NULL) {
+        memset_zero(tmp1, VEC_N_SIZE_64 * sizeof(uint64_t));
+    }
+    if (tmp2 != NULL) {
+        memset_zero(tmp2, VEC_N1N2_SIZE_64 * sizeof(uint64_t));
+    }
     free(y);
     free(tmp1);
     free(tmp2);
 
-    return 0;
+    return result;
 }

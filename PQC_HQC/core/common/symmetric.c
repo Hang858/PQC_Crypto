@@ -154,18 +154,20 @@ void hash_g(uint8_t *output, const uint8_t hash_ek_kem[SEED_BYTES], const uint8_
  * @param[out] output       Buffer (32 bytes) to receive the hash output.
  * @param[in]  hash_ek_kem  Hash of the KEM encapsulation key.
  * @param[in]  sigma        The string sigma.
- * @param[in]  c_kem        Pointer to ciphertext struct (includes c_pke.u, c_pke.v, and salt).
+ * @param[in]  c_kem        Serialized KEM ciphertext.
  */
 void hash_j(uint8_t *output, const uint8_t hash_ek_kem[SEED_BYTES], const uint8_t *sigma,
-            const ciphertext_kem_t *c_kem) {
+            const uint8_t *c_kem) {
     sha3_256_ctx k_hash_ctx = {0};
     uint8_t k_domain = HQC_J_FCT_DOMAIN;
+    const size_t n_bytes = CEIL_DIVIDE(HQC_active_params()->n, 8);
+    const size_t n1n2_bytes = CEIL_DIVIDE(HQC_active_params()->n1n2, 8);
     sha3_256_inc_init(&k_hash_ctx);
     sha3_256_inc_absorb(&k_hash_ctx, hash_ek_kem, SEED_BYTES);
     sha3_256_inc_absorb(&k_hash_ctx, sigma, PARAM_SECURITY_BYTES);
-    sha3_256_inc_absorb(&k_hash_ctx, (uint8_t *)c_kem->c_pke.u, CEIL_DIVIDE(HQC_active_params()->n, 8));
-    sha3_256_inc_absorb(&k_hash_ctx, (uint8_t *)c_kem->c_pke.v, CEIL_DIVIDE(HQC_active_params()->n1n2, 8));
-    sha3_256_inc_absorb(&k_hash_ctx, c_kem->salt, SALT_BYTES);
+    sha3_256_inc_absorb(&k_hash_ctx, c_kem, n_bytes);
+    sha3_256_inc_absorb(&k_hash_ctx, c_kem + n_bytes, n1n2_bytes);
+    sha3_256_inc_absorb(&k_hash_ctx, c_kem + n_bytes + n1n2_bytes, SALT_BYTES);
     sha3_256_inc_absorb(&k_hash_ctx, &k_domain, 1);
     sha3_256_inc_finalize(output, &k_hash_ctx);
 }

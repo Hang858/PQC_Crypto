@@ -12,12 +12,13 @@
 /**
  * @brief Public-key encryption ciphertext.
  *
- * - u: length VEC_N_SIZE_64 words
- * - v: length VEC_N_SIZE_64 words
+ * The buffers are allocated for the active parameter set.  Keeping pointers
+ * here is important for the run-time multi-level build: embedding arrays sized
+ * for HQC-5 made every HQC-1 ciphertext consume the HQC-5 maximum.
  */
 typedef struct {
-    uint64_t u[HQC_MAX_VEC_N_SIZE_64]; /**< first vector half */
-    uint64_t v[HQC_MAX_VEC_N_SIZE_64]; /**< second vector half */
+    uint64_t *u; /**< VEC_N_SIZE_64 words */
+    uint64_t *v; /**< VEC_N1N2_SIZE_64 words */
 } ciphertext_pke_t;
 
 /**

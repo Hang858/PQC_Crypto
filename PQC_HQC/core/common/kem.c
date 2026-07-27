@@ -16,6 +16,31 @@
 
 #include "hqc_log.h"
 
+static int ciphertext_kem_init(ciphertext_kem_t *ciphertext) {
+    memset(ciphertext, 0, sizeof(*ciphertext));
+    ciphertext->c_pke.u = calloc(VEC_N_SIZE_64, sizeof(uint64_t));
+    ciphertext->c_pke.v = calloc(VEC_N1N2_SIZE_64, sizeof(uint64_t));
+    if (ciphertext->c_pke.u == NULL || ciphertext->c_pke.v == NULL) {
+        free(ciphertext->c_pke.u);
+        free(ciphertext->c_pke.v);
+        ciphertext->c_pke.u = NULL;
+        ciphertext->c_pke.v = NULL;
+        return -1;
+    }
+    return 0;
+}
+
+static void ciphertext_kem_clear(ciphertext_kem_t *ciphertext) {
+    if (ciphertext == NULL) {
+        return;
+    }
+    free(ciphertext->c_pke.u);
+    free(ciphertext->c_pke.v);
+    ciphertext->c_pke.u = NULL;
+    ciphertext->c_pke.v = NULL;
+    memset_zero(ciphertext->salt, sizeof(ciphertext->salt));
+}
+
 /**
  * @brief Generates a keypair for the KEM (Key Encapsulation Mechanism) scheme.
  *
@@ -35,14 +60,13 @@ int crypto_kem_keypair(uint8_t *ek_kem, uint8_t *dk_kem) {
     HQC_LOGF("\n\n\n### KEYGEN ###");
 #endif
     uint8_t *seed_kem = calloc(SEED_BYTES, sizeof(uint8_t));
-    uint8_t *sigma = calloc(HQC_MAX_SECURITY_BYTES, sizeof(uint8_t));
+    uint8_t *sigma = calloc(PARAM_SECURITY_BYTES, sizeof(uint8_t));
     uint8_t *seed_pke = calloc(SEED_BYTES, sizeof(uint8_t));
     shake256_xof_ctx ctx_kem;
 
-    uint8_t *ek_pke = calloc(HQC_MAX_PUBLIC_KEY_BYTES, sizeof(uint8_t));
     uint8_t *dk_pke = calloc(SEED_BYTES, sizeof(uint8_t));
 
-    if (seed_kem == NULL || sigma == NULL || seed_pke == NULL || ek_pke == NULL || dk_pke == NULL) {
+    if (seed_kem == NULL || sigma == NULL || seed_pke == NULL || dk_pke == NULL) {
         goto cleanup;
     }
 
@@ -57,11 +81,10 @@ int crypto_kem_keypair(uint8_t *ek_kem, uint8_t *dk_kem) {
     xof_get_bytes(&ctx_kem, sigma, PARAM_SECURITY_BYTES);
 
     // Compute HQC-PKE keypair
-    hqc_pke_keygen(ek_pke, dk_pke, seed_pke);
+    hqc_pke_keygen(ek_kem, dk_pke, seed_pke);
 
     // Compute HQC-KEM keypair (use runtime level-specific sizes)
     unsigned int pkbytes = HQC_active_params()->publickeybytes;
-    memcpy(ek_kem, ek_pke, pkbytes);
     memcpy(dk_kem, ek_kem, pkbytes);
     memcpy(dk_kem + pkbytes, dk_pke, SEED_BYTES);
     memcpy(dk_kem + pkbytes + SEED_BYTES, sigma, PARAM_SECURITY_BYTES);
@@ -81,7 +104,7 @@ int crypto_kem_keypair(uint8_t *ek_kem, uint8_t *dk_kem) {
         memset_zero(seed_kem, SEED_BYTES);
     }
     if (sigma != NULL) {
-        memset_zero(sigma, HQC_MAX_SECURITY_BYTES);
+        memset_zero(sigma, PARAM_SECURITY_BYTES);
     }
     if (seed_pke != NULL) {
         memset_zero(seed_pke, SEED_BYTES);
@@ -92,7 +115,6 @@ int crypto_kem_keypair(uint8_t *ek_kem, uint8_t *dk_kem) {
     free(seed_kem);
     free(sigma);
     free(seed_pke);
-    free(ek_pke);
     free(dk_pke);
     return 0;
 
@@ -101,7 +123,7 @@ cleanup:
         memset_zero(seed_kem, SEED_BYTES);
     }
     if (sigma != NULL) {
-        memset_zero(sigma, HQC_MAX_SECURITY_BYTES);
+        memset_zero(sigma, PARAM_SECURITY_BYTES);
     }
     if (seed_pke != NULL) {
         memset_zero(seed_pke, SEED_BYTES);
@@ -112,7 +134,6 @@ cleanup:
     free(seed_kem);
     free(sigma);
     free(seed_pke);
-    free(ek_pke);
     free(dk_pke);
     return -1;
 }
@@ -135,28 +156,27 @@ int crypto_kem_enc(uint8_t *c_kem, uint8_t *K, const uint8_t *ek_kem) {
     HQC_LOGF("\n\n\n\n### ENCAPS ###");
 #endif
 
-    uint8_t *m = calloc(HQC_MAX_SECURITY_BYTES, sizeof(uint8_t));
-    uint8_t *K_theta = calloc(HQC_SHARED_SECRET_BYTES + HQC_SEED_BYTES, sizeof(uint8_t));
-    uint8_t *theta = calloc(SEED_BYTES, sizeof(uint8_t));
+    uint8_t *m = calloc(PARAM_SECURITY_BYTES, sizeof(uint8_t));
+    uint8_t *K_theta = calloc(SHARED_SECRET_BYTES + SEED_BYTES, sizeof(uint8_t));
     uint8_t *hash_ek_kem = calloc(SEED_BYTES, sizeof(uint8_t));
-    ciphertext_kem_t *c_kem_t = calloc(1, sizeof(ciphertext_kem_t));
-    if (m == NULL || K_theta == NULL || theta == NULL || hash_ek_kem == NULL || c_kem_t == NULL) {
+    ciphertext_kem_t c_kem_t = {0};
+    if (m == NULL || K_theta == NULL || hash_ek_kem == NULL ||
+        ciphertext_kem_init(&c_kem_t) != 0) {
         goto cleanup;
     }
 
     // Sample message m and salt
     if (hqc_randombytes(m, PARAM_SECURITY_BYTES) != 0 ||
-        hqc_randombytes(c_kem_t->salt, SALT_BYTES) != 0) {
+        hqc_randombytes(c_kem_t.salt, SALT_BYTES) != 0) {
         goto cleanup;
     }
 
     // Compute shared key K and ciphertext c_kem
     hash_h(hash_ek_kem, ek_kem);
-    hash_g(K_theta, hash_ek_kem, m, c_kem_t->salt);
-    memcpy(theta, K_theta + SEED_BYTES, SEED_BYTES);
-    hqc_pke_encrypt(&c_kem_t->c_pke, ek_kem, (uint64_t *)m, theta);
+    hash_g(K_theta, hash_ek_kem, m, c_kem_t.salt);
+    hqc_pke_encrypt(&c_kem_t.c_pke, ek_kem, (uint64_t *)m, K_theta + SHARED_SECRET_BYTES);
 
-    hqc_c_kem_to_string(c_kem, c_kem_t);
+    hqc_c_kem_to_string(c_kem, &c_kem_t);
     memcpy(K, K_theta, SHARED_SECRET_BYTES);
 
 #ifdef VERBOSE
@@ -165,11 +185,11 @@ int crypto_kem_enc(uint8_t *c_kem, uint8_t *K, const uint8_t *ek_kem) {
     HQC_LOGF("\n\nm: ");
     vect_print((uint64_t *)m, PARAM_SECURITY_BYTES);
     HQC_LOGF("\n\nsalt: ");
-    for (int i = 0; i < SALT_BYTES; ++i) HQC_LOGF("%02x", c_kem_t->salt[i]);
+    for (int i = 0; i < SALT_BYTES; ++i) HQC_LOGF("%02x", c_kem_t.salt[i]);
     HQC_LOGF("\n\nH(ek_kem): ");
     for (int i = 0; i < SEED_BYTES; ++i) HQC_LOGF("%02x", hash_ek_kem[i]);
     HQC_LOGF("\n\ntheta: ");
-    for (int i = 0; i < SEED_BYTES; ++i) HQC_LOGF("%02x", theta[i]);
+    for (int i = 0; i < SEED_BYTES; ++i) HQC_LOGF("%02x", K_theta[SHARED_SECRET_BYTES + i]);
     HQC_LOGF("\n\nc_kem: ");
     for (int i = 0; i < CIPHERTEXT_BYTES; ++i) HQC_LOGF("%02x", c_kem[i]);
     HQC_LOGF("\n\nK: ");
@@ -178,36 +198,28 @@ int crypto_kem_enc(uint8_t *c_kem, uint8_t *K, const uint8_t *ek_kem) {
 
     // Zeroize sensitive data
     if (m != NULL) {
-        memset_zero(m, HQC_MAX_SECURITY_BYTES);
+        memset_zero(m, PARAM_SECURITY_BYTES);
     }
     if (K_theta != NULL) {
-        memset_zero(K_theta, HQC_SHARED_SECRET_BYTES + HQC_SEED_BYTES);
-    }
-    if (theta != NULL) {
-        memset_zero(theta, SEED_BYTES);
+        memset_zero(K_theta, SHARED_SECRET_BYTES + SEED_BYTES);
     }
     free(m);
     free(K_theta);
-    free(theta);
     free(hash_ek_kem);
-    free(c_kem_t);
+    ciphertext_kem_clear(&c_kem_t);
     return 0;
 
 cleanup:
     if (m != NULL) {
-        memset_zero(m, HQC_MAX_SECURITY_BYTES);
+        memset_zero(m, PARAM_SECURITY_BYTES);
     }
     if (K_theta != NULL) {
-        memset_zero(K_theta, HQC_SHARED_SECRET_BYTES + HQC_SEED_BYTES);
-    }
-    if (theta != NULL) {
-        memset_zero(theta, SEED_BYTES);
+        memset_zero(K_theta, SHARED_SECRET_BYTES + SEED_BYTES);
     }
     free(m);
     free(K_theta);
-    free(theta);
     free(hash_ek_kem);
-    free(c_kem_t);
+    ciphertext_kem_clear(&c_kem_t);
     return -1;
 }
 
@@ -228,50 +240,41 @@ int crypto_kem_dec(uint8_t *K_prime, const uint8_t *c_kem, const uint8_t *dk_kem
     HQC_LOGF("\n\n\n\n### DECAPS ###");
 #endif
 
-    uint8_t *ek_pke = calloc(HQC_MAX_PUBLIC_KEY_BYTES, sizeof(uint8_t));
-    uint8_t *dk_pke = calloc(SEED_BYTES, sizeof(uint8_t));
-    uint8_t *sigma = calloc(HQC_MAX_SECURITY_BYTES, sizeof(uint8_t));
-    uint8_t *m_prime = calloc(HQC_MAX_SECURITY_BYTES, sizeof(uint8_t));
+    const unsigned int pkbytes = HQC_active_params()->publickeybytes;
+    const uint8_t *ek_pke = dk_kem;
+    const uint8_t *dk_pke = dk_kem + pkbytes;
+    const uint8_t *sigma = dk_pke + SEED_BYTES;
+    uint8_t *m_prime = calloc(PARAM_SECURITY_BYTES, sizeof(uint8_t));
     uint8_t *hash_ek_kem = calloc(SEED_BYTES, sizeof(uint8_t));
-    uint8_t *K_theta_prime = calloc(HQC_SHARED_SECRET_BYTES + HQC_SEED_BYTES, sizeof(uint8_t));
-    uint8_t *K_bar = calloc(HQC_SHARED_SECRET_BYTES, sizeof(uint8_t));
-    uint8_t *theta_prime = calloc(SEED_BYTES, sizeof(uint8_t));
-    ciphertext_kem_t *c_kem_t = calloc(1, sizeof(ciphertext_kem_t));
-    ciphertext_kem_t *c_kem_prime_t = calloc(1, sizeof(ciphertext_kem_t));
+    uint8_t *K_theta_prime = calloc(SHARED_SECRET_BYTES + SEED_BYTES, sizeof(uint8_t));
+    uint8_t *K_bar = calloc(SHARED_SECRET_BYTES, sizeof(uint8_t));
+    ciphertext_kem_t c_kem_t = {0};
     uint8_t result;
 
-    if (ek_pke == NULL || dk_pke == NULL || sigma == NULL || m_prime == NULL ||
-        hash_ek_kem == NULL || K_theta_prime == NULL || K_bar == NULL || theta_prime == NULL ||
-        c_kem_t == NULL || c_kem_prime_t == NULL) {
+    if (m_prime == NULL || hash_ek_kem == NULL || K_theta_prime == NULL || K_bar == NULL ||
+        ciphertext_kem_init(&c_kem_t) != 0) {
         goto cleanup;
     }
 
     // Parse decapsulation key dk_kem
-    unsigned int pkbytes = HQC_active_params()->publickeybytes;
-    memcpy(ek_pke, dk_kem, pkbytes);
-    memcpy(dk_pke, dk_kem + pkbytes, SEED_BYTES);
-    memcpy(sigma, dk_kem + pkbytes + SEED_BYTES, PARAM_SECURITY_BYTES);
-
     // Parse ciphertext c_kem
-    hqc_c_kem_from_string(&c_kem_t->c_pke, c_kem_t->salt, c_kem);
+    hqc_c_kem_from_string(&c_kem_t.c_pke, c_kem_t.salt, c_kem);
 
     // Compute message m_prime
-    result = hqc_pke_decrypt((uint64_t *)m_prime, dk_pke, &c_kem_t->c_pke);
+    result = hqc_pke_decrypt((uint64_t *)m_prime, dk_pke, &c_kem_t.c_pke);
 
     // Compute shared key K_prime and ciphertext c_kem_prime
     hash_h(hash_ek_kem, ek_pke);
-    hash_g(K_theta_prime, hash_ek_kem, m_prime, c_kem_t->salt);
+    hash_g(K_theta_prime, hash_ek_kem, m_prime, c_kem_t.salt);
     memcpy(K_prime, K_theta_prime, SHARED_SECRET_BYTES);
-    memcpy(theta_prime, K_theta_prime + SHARED_SECRET_BYTES, SEED_BYTES);
-
-    hqc_pke_encrypt(&c_kem_prime_t->c_pke, ek_pke, (uint64_t *)m_prime, theta_prime);
-    memcpy(c_kem_prime_t->salt, c_kem_t->salt, SALT_BYTES);
+    hqc_pke_encrypt(&c_kem_t.c_pke, ek_pke, (uint64_t *)m_prime,
+                    K_theta_prime + SHARED_SECRET_BYTES);
 
     // Compute rejection key K_bar
-    hash_j(K_bar, hash_ek_kem, sigma, c_kem_t);
-    result |= vect_compare((uint8_t *)c_kem_t->c_pke.u, (uint8_t *)c_kem_prime_t->c_pke.u, VEC_N_SIZE_BYTES);
-    result |= vect_compare((uint8_t *)c_kem_t->c_pke.v, (uint8_t *)c_kem_prime_t->c_pke.v, VEC_N1N2_SIZE_BYTES);
-    result |= vect_compare(c_kem_t->salt, c_kem_prime_t->salt, SALT_BYTES);
+    hash_j(K_bar, hash_ek_kem, sigma, c_kem);
+    result |= vect_compare((uint8_t *)c_kem_t.c_pke.u, c_kem, VEC_N_SIZE_BYTES);
+    result |= vect_compare((uint8_t *)c_kem_t.c_pke.v, c_kem + VEC_N_SIZE_BYTES, VEC_N1N2_SIZE_BYTES);
+    result |= vect_compare(c_kem_t.salt, c_kem + VEC_N_SIZE_BYTES + VEC_N1N2_SIZE_BYTES, SALT_BYTES);
     result -= 1;
     for (size_t i = 0; i < SHARED_SECRET_BYTES; ++i) {
         K_prime[i] = (K_prime[i] & result) ^ (K_bar[i] & ~result);
@@ -289,78 +292,50 @@ int crypto_kem_dec(uint8_t *K_prime, const uint8_t *c_kem, const uint8_t *dk_kem
     HQC_LOGF("\n\nH(ek_kem): ");
     for (int i = 0; i < SEED_BYTES; ++i) HQC_LOGF("%02x", hash_ek_kem[i]);
     HQC_LOGF("\n\ntheta_prime: ");
-    for (int i = 0; i < SEED_BYTES; ++i) HQC_LOGF("%02x", theta_prime[i]);
+    for (int i = 0; i < SEED_BYTES; ++i) HQC_LOGF("%02x", K_theta_prime[SHARED_SECRET_BYTES + i]);
     HQC_LOGF("\n\n\n# Checking Ciphertext - Begin #");
     HQC_LOGF("\n\nc_kem_prime_t.c_pke.u: ");
-    vect_print(c_kem_prime_t->c_pke.u, VEC_N_SIZE_BYTES);
+    vect_print(c_kem_t.c_pke.u, VEC_N_SIZE_BYTES);
     HQC_LOGF("\n\nc_kem_prime_t.c_pke.v: ");
-    vect_print(c_kem_prime_t->c_pke.v, VEC_N1N2_SIZE_BYTES);
+    vect_print(c_kem_t.c_pke.v, VEC_N1N2_SIZE_BYTES);
     HQC_LOGF("\n\nsalt: ");
-    for (int i = 0; i < SALT_BYTES; ++i) HQC_LOGF("%02x", c_kem_prime_t->salt[i]);
+    for (int i = 0; i < SALT_BYTES; ++i) HQC_LOGF("%02x", c_kem_t.salt[i]);
     HQC_LOGF("\n\n# Checking Ciphertext - End #\n");
     HQC_LOGF("\n\nK_prime: ");
     for (int i = 0; i < SHARED_SECRET_BYTES; ++i) HQC_LOGF("%02x", K_prime[i]);
 #endif
 
     // Zeroize sensitive data
-    if (dk_pke != NULL) {
-        memset_zero(dk_pke, SEED_BYTES);
-    }
-    if (sigma != NULL) {
-        memset_zero(sigma, HQC_MAX_SECURITY_BYTES);
-    }
     if (m_prime != NULL) {
-        memset_zero(m_prime, HQC_MAX_SECURITY_BYTES);
+        memset_zero(m_prime, PARAM_SECURITY_BYTES);
     }
     if (K_theta_prime != NULL) {
-        memset_zero(K_theta_prime, HQC_SHARED_SECRET_BYTES + HQC_SEED_BYTES);
+        memset_zero(K_theta_prime, SHARED_SECRET_BYTES + SEED_BYTES);
     }
     if (K_bar != NULL) {
-        memset_zero(K_bar, HQC_SHARED_SECRET_BYTES);
+        memset_zero(K_bar, SHARED_SECRET_BYTES);
     }
-    if (theta_prime != NULL) {
-        memset_zero(theta_prime, SEED_BYTES);
-    }
-    free(ek_pke);
-    free(dk_pke);
-    free(sigma);
     free(m_prime);
     free(hash_ek_kem);
     free(K_theta_prime);
     free(K_bar);
-    free(theta_prime);
-    free(c_kem_t);
-    free(c_kem_prime_t);
+    ciphertext_kem_clear(&c_kem_t);
     return 0;
 
 cleanup:
-    if (dk_pke != NULL) {
-        memset_zero(dk_pke, SEED_BYTES);
-    }
-    if (sigma != NULL) {
-        memset_zero(sigma, HQC_MAX_SECURITY_BYTES);
-    }
     if (m_prime != NULL) {
-        memset_zero(m_prime, HQC_MAX_SECURITY_BYTES);
+        memset_zero(m_prime, PARAM_SECURITY_BYTES);
     }
     if (K_theta_prime != NULL) {
-        memset_zero(K_theta_prime, HQC_SHARED_SECRET_BYTES + HQC_SEED_BYTES);
+        memset_zero(K_theta_prime, SHARED_SECRET_BYTES + SEED_BYTES);
     }
     if (K_bar != NULL) {
-        memset_zero(K_bar, HQC_SHARED_SECRET_BYTES);
+        memset_zero(K_bar, SHARED_SECRET_BYTES);
     }
-    if (theta_prime != NULL) {
-        memset_zero(theta_prime, SEED_BYTES);
-    }
-    free(ek_pke);
-    free(dk_pke);
-    free(sigma);
     free(m_prime);
     free(hash_ek_kem);
     free(K_theta_prime);
     free(K_bar);
-    free(theta_prime);
-    free(c_kem_t);
-    free(c_kem_prime_t);
+    ciphertext_kem_clear(&c_kem_t);
     return -1;
 }
