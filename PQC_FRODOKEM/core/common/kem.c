@@ -118,16 +118,23 @@ int crypto_kem_keypair_impl(unsigned char* pk, unsigned char* sk)
             }
         }
 
-        // Now compute B = A×S + E using the LE-stored S, squeezing E incrementally
-        if (frodo_mul_add_as_plus_e_from_sk(pk_b, sk_S, st, alg, pk_seedA) == 0) {
+        // Consume the remaining stream as E and temporarily store packed E
+        // in pk_b.  This finishes the level-dependent SHAKE128/SHAKE256
+        // stream before SHAKE128 is used to generate A rows below.
+        if (frodo_pack_e_from_state(pk_b, st, alg) == 0) {
             clear_bytes((uint8_t *)st, FRODO_SHA3_STATE_U64 * sizeof(*st));
             free(st);
             goto cleanup;
         }
-        // Note: E is fully consumed by frodo_mul_add_as_plus_e_from_sk
-        // The SHAKE state is now exhausted (no more data to squeeze)
+        // Note: E is fully consumed.  No hash state is paused across the
+        // subsequent A generation, which is required for hardware SHAKE
+        // engines with non-exportable state.
         clear_bytes((uint8_t *)st, FRODO_SHA3_STATE_U64 * sizeof(*st));
         free(st);
+
+        if (frodo_mul_add_as_plus_packed_e_from_sk(pk_b, sk_S, pk_seedA) == 0) {
+            goto cleanup;
+        }
     }
 
     // Add s, pk and S to the secret key

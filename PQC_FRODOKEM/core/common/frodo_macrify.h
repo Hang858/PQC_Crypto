@@ -47,14 +47,16 @@ int frodo_mul_add_sa_tile(uint16_t out_tile[8][8],
                            const uint8_t *seed_A,
                            int col_block);
 
-// Low-memory keypair variant: computes B = A¡ÁS + E row-block by row-block,
-// packing each 8-row block into pk_b immediately. S is read from sk_S in
-// little-endian byte form, E is squeezed incrementally from the SHAKE state
-// (which must be positioned right after the S squeeze).
-int frodo_mul_add_as_plus_e_from_sk(uint8_t *pk_b,
-                                    const uint8_t *sk_S,
-                                    uint64_t e_st[FRODO_SHA3_STATE_U64],
-                                    uint8_t shake_alg,
-                                    const uint8_t *seed_A);
+// Low-memory keypair helpers:
+// 1) consume the post-S SHAKE stream and store sampled E packed in pk_b;
+// 2) compute B = A*S + E by unpacking each packed-E row block from pk_b,
+//    generating A rows with a single SHAKE128 state at a time, and packing
+//    the final B row block back into pk_b.
+int frodo_pack_e_from_state(uint8_t *pk_b,
+                            uint64_t e_st[FRODO_SHA3_STATE_U64],
+                            uint8_t shake_alg);
+int frodo_mul_add_as_plus_packed_e_from_sk(uint8_t *pk_b,
+                                           const uint8_t *sk_S,
+                                           const uint8_t *seed_A);
 
 #endif

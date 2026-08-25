@@ -357,31 +357,15 @@ int frodo_mul_add_sa_tile(uint16_t out_tile[8][8],
 }
 
 
-int frodo_mul_add_as_plus_e_from_sk(uint8_t *pk_b,
-                                    const uint8_t *sk_S,
-                                    uint64_t e_st[FRODO_SHA3_STATE_U64],
-                                    uint8_t shake_alg,
-                                    const uint8_t *seed_A)
-{ // Low-memory keypair variant: B = A x S + E, row-block by row-block.
-  // S is read from sk_S (N x N_BAR stored column-major, LE uint16).
-  // E is squeezed incrementally from e_st (SHAKE state already past the S squeeze).
-  // Each 8-row block of B is packed into pk_b immediately.
-    int i_block, j_block;
+int frodo_pack_e_from_state(uint8_t *pk_b,
+                            uint64_t e_st[FRODO_SHA3_STATE_U64],
+                            uint8_t shake_alg)
+{ // Consume the post-S SHAKE stream, sample E row-block by row-block,
+  // and store E packed in pk_b.  pk_b is later overwritten with final B.
+    int i_block;
     const size_t row_bytes = (size_t)PARAMS_NBAR * PARAMS_LOGQ / 8;
 
-    uint8_t seed_A_separated[2 + BYTES_SEED_A];
-    memcpy(&seed_A_separated[2], seed_A, BYTES_SEED_A);
-    uint16_t *seed_A_origin = (uint16_t *)&seed_A_separated;
-
-    // Eight SHAKE states occupy 1,664 B. Allocate them once and reuse them
-    // for every row block instead of putting them in this call frame.
-    uint64_t (*a_state)[FRODO_SHA3_STATE_U64] = malloc(8 * sizeof(*a_state));
-    if (a_state == NULL) {
-        return 0;
-    }
-
     for (i_block = 0; i_block < PARAMS_N; i_block += 8) {
-        // Squeeze E[i_block] (8 rows x N_BAR cols) from the incremental SHAKE state
         uint16_t e_tile[64];
         OP_hash_squeeze(shake_alg, e_st, (int)(FRODO_SHA3_STATE_U64 * sizeof(uint64_t)),
                         (uint8_t *)e_tile, (int)(8 * PARAMS_NBAR * sizeof(uint16_t)));
@@ -390,20 +374,62 @@ int frodo_mul_add_as_plus_e_from_sk(uint8_t *pk_b,
         }
         frodo_sample_n(e_tile, (size_t)(8 * PARAMS_NBAR));
 
-        // Initialize B_acc[8][NBAR] from e_tile
-        uint16_t B_acc[8][8];
-        for (int r = 0; r < 8; r++) {
-            for (int c = 0; c < PARAMS_NBAR; c++) {
-                B_acc[r][c] = e_tile[r * PARAMS_NBAR + c];
-            }
-        }
+        frodo_pack(pk_b + (size_t)i_block * row_bytes,
+                   row_bytes * 8,
+                   e_tile, 8 * PARAMS_NBAR, PARAMS_LOGQ);
+    }
 
-        // Initialize 8 SHAKE128 states for A rows i_block .. i_block+7
+    return 1;
+}
+
+
+int frodo_mul_add_as_plus_packed_e_from_sk(uint8_t *pk_b,
+                                           const uint8_t *sk_S,
+                                           const uint8_t *seed_A)
+{ // Low-memory keypair variant for hardware SHAKE engines that cannot keep
+  // multiple software-visible states alive.  E is already packed in pk_b.
+  // A rows are generated one complete row at a time with a single SHAKE128
+  // state, then consumed as 8x8 tiles to compute B = A*S + E.
+    int i_block, j_block;
+    const size_t row_bytes = (size_t)PARAMS_NBAR * PARAMS_LOGQ / 8;
+
+    uint8_t seed_A_separated[2 + BYTES_SEED_A];
+    memcpy(&seed_A_separated[2], seed_A, BYTES_SEED_A);
+    uint16_t *seed_A_origin = (uint16_t *)&seed_A_separated;
+
+    uint16_t *a_rows = malloc((size_t)8 * PARAMS_N * sizeof(uint16_t));
+    uint64_t *a_state = malloc(FRODO_SHA3_STATE_U64 * sizeof(*a_state));
+    if (a_rows == NULL || a_state == NULL) {
+        free(a_rows);
+        free(a_state);
+        return 0;
+    }
+
+    for (i_block = 0; i_block < PARAMS_N; i_block += 8) {
+        uint16_t B_acc[8][8];
+
+        frodo_unpack((uint16_t *)B_acc, 8 * PARAMS_NBAR,
+                     pk_b + (size_t)i_block * row_bytes,
+                     row_bytes * 8, PARAMS_LOGQ);
+
+        // Generate A rows i_block .. i_block+7.  Complete each row before
+        // reinitialising SHAKE128 for the next row; no hash state is paused.
         for (int r = 0; r < 8; r++) {
+            uint8_t *row_bytes_out = (uint8_t *)&a_rows[(size_t)r * PARAMS_N];
             seed_A_origin[0] = UINT16_TO_LE((uint16_t)(i_block + r));
-            OP_hash_init(OP_ALG_SHAKE128, a_state[r], (int)sizeof(a_state[r]));
-            OP_hash_absorb(OP_ALG_SHAKE128, a_state[r], (int)sizeof(a_state[r]),
+            OP_hash_init(OP_ALG_SHAKE128, a_state,
+                         (int)(FRODO_SHA3_STATE_U64 * sizeof(*a_state)));
+            OP_hash_absorb(OP_ALG_SHAKE128, a_state,
+                           (int)(FRODO_SHA3_STATE_U64 * sizeof(*a_state)),
                            seed_A_separated, 2 + BYTES_SEED_A);
+            OP_hash_squeeze(OP_ALG_SHAKE128, a_state,
+                            (int)(FRODO_SHA3_STATE_U64 * sizeof(*a_state)),
+                            row_bytes_out, (int)(PARAMS_N * sizeof(uint16_t)));
+            for (int c = 0; c < PARAMS_N; c++) {
+                a_rows[(size_t)r * PARAMS_N + c] =
+                    (uint16_t)(row_bytes_out[2 * c] |
+                               ((uint16_t)row_bytes_out[2 * c + 1] << 8));
+            }
         }
 
         // Multiply A[i_block] x S for all column blocks of A
@@ -420,11 +446,8 @@ int frodo_mul_add_as_plus_e_from_sk(uint8_t *pk_b,
             // Generate A[i_block][j_block] from SHAKE states
             uint16_t x_tile[8][8];
             for (int r = 0; r < 8; r++) {
-                uint8_t abuf[16];
-                OP_hash_squeeze(OP_ALG_SHAKE128, a_state[r], (int)sizeof(a_state[r]),
-                                abuf, (int)sizeof(abuf));
                 for (int c = 0; c < 8; c++) {
-                    x_tile[r][c] = (uint16_t)(abuf[2 * c] | ((uint16_t)abuf[2 * c + 1] << 8));
+                    x_tile[r][c] = a_rows[(size_t)r * PARAMS_N + (j_block + c)];
                 }
             }
 
@@ -433,7 +456,9 @@ int frodo_mul_add_as_plus_e_from_sk(uint8_t *pk_b,
             if (OP_matrix_mul_8x8(z, (const uint16_t (*)[8])x_tile,
                                   (const uint16_t (*)[8])S_tile,
                                   (uint16_t)PARAMS_Q) != OP_SUCCESS) {
-                clear_bytes((uint8_t *)a_state, 8 * sizeof(*a_state));
+                clear_bytes((uint8_t *)a_rows, (size_t)8 * PARAMS_N * sizeof(uint16_t));
+                clear_bytes((uint8_t *)a_state, FRODO_SHA3_STATE_U64 * sizeof(*a_state));
+                free(a_rows);
                 free(a_state);
                 return 0;
             }
@@ -450,7 +475,9 @@ int frodo_mul_add_as_plus_e_from_sk(uint8_t *pk_b,
                    (const uint16_t *)B_acc, 8 * PARAMS_NBAR, PARAMS_LOGQ);
     }
 
-    clear_bytes((uint8_t *)a_state, 8 * sizeof(*a_state));
+    clear_bytes((uint8_t *)a_rows, (size_t)8 * PARAMS_N * sizeof(uint16_t));
+    clear_bytes((uint8_t *)a_state, FRODO_SHA3_STATE_U64 * sizeof(*a_state));
+    free(a_rows);
     free(a_state);
     return 1;
 }
