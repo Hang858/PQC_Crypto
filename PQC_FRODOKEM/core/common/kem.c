@@ -307,11 +307,9 @@ int crypto_kem_dec_impl(unsigned char *ss, const unsigned char *ct, const unsign
     uint8_t *seedSEprime = NULL;                                      // contains secret data
     uint8_t *kprime = NULL;                                           // contains secret data
     uint8_t fin_k[FRODOKEM_MAX_SHARED_SECRET_BYTES];                  // selected k for F, contains secret data
-    // Keccak/SHAKE contexts are 208 B each.  They are heap workspaces so
-    // the 4 KiB TS300 stack is reserved for call frames and small tiles.
-    uint64_t *sp_st = NULL;
-    uint64_t *ep_saved = NULL;
-    uint64_t *work_st = NULL;
+    // One active Keccak/SHAKE context plus a discard buffer. The workspace
+    // replaces the previously concurrent saved states and eight A-row states.
+    uint64_t *hash_workspace = NULL;
     int ret = 1;
 
     if (W == NULL || C == NULL || CC == NULL ||
@@ -385,36 +383,40 @@ int crypto_kem_dec_impl(unsigned char *ss, const unsigned char *ct, const unsign
     memcpy(G2in_salt, salt, BYTES_SALT);
     shake(G2out, BYTES_SEED_SE + CRYPTO_BYTES, G2in, BYTES_PKHASH + BYTES_MU + BYTES_SALT);
 
-    // Low-memory: Sp squeezed fully, then SHAKE state saved so Ep' can be
-    // squeezed tile-by-tile (column-block order) for each BBp column comparison.
-    // This eliminates the 10 KB Bp buffer at the cost of more SHAKE output.
+    // Low-memory re-encryption. Sp is retained, while Ep' is replayed one
+    // column tile at a time. Every replay starts from seedSE': no SHAKE state
+    // is copied, paused, or resumed across A generation.
     {
         uint8_t shake_input[1 + BYTES_SEED_SE];
         uint8_t alg = frodokem_shake_alg();
-        uint8_t discard[128];
+        const size_t state_words = FRODO_SHA3_STATE_U64;
+        const size_t discard_words = 8 * FRODO_SHA3_STATE_U64;
+        const size_t workspace_words = state_words + discard_words;
+        uint64_t *hash_st;
+        uint8_t *discard;
+        const size_t discard_len = discard_words * sizeof(uint64_t);
         int i;
 
-        sp_st = malloc(FRODO_SHA3_STATE_U64 * sizeof(*sp_st));
-        ep_saved = malloc(FRODO_SHA3_STATE_U64 * sizeof(*ep_saved));
-        work_st = malloc(FRODO_SHA3_STATE_U64 * sizeof(*work_st));
-        if (sp_st == NULL || ep_saved == NULL || work_st == NULL) {
+        hash_workspace = malloc(workspace_words * sizeof(*hash_workspace));
+        if (hash_workspace == NULL) {
             goto cleanup;
         }
+        hash_st = hash_workspace;
+        discard = (uint8_t *)&hash_workspace[state_words];
 
         shake_input[0] = 0x96;
         memcpy(&shake_input[1], seedSEprime, BYTES_SEED_SE);
-        OP_hash_init(alg, sp_st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*sp_st)));
-        OP_hash_absorb(alg, sp_st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*sp_st)), shake_input, 1 + BYTES_SEED_SE);
+        OP_hash_init(alg, hash_st, (int)(state_words * sizeof(*hash_st)));
+        OP_hash_absorb(alg, hash_st, (int)(state_words * sizeof(*hash_st)),
+                       shake_input, 1 + BYTES_SEED_SE);
 
-        // Squeeze Sp (full)
-        OP_hash_squeeze(alg, sp_st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*sp_st)), (uint8_t *)Sp,
+        // Squeeze Sp once and keep it for every BBp column tile. For q=0 the
+        // same state is already positioned at the beginning of Ep'.
+        OP_hash_squeeze(alg, hash_st, (int)(state_words * sizeof(*hash_st)), (uint8_t *)Sp,
                         (int)(PARAMS_N * PARAMS_NBAR * sizeof(uint16_t)));
         for (i = 0; i < (int)(PARAMS_N * PARAMS_NBAR); i++)
             Sp[i] = LE_TO_UINT16(Sp[i]);
         frodo_sample_n(Sp, PARAMS_N * PARAMS_NBAR);
-
-        // Save SHAKE state so we can replay Ep' per column block
-        memcpy(ep_saved, sp_st, FRODO_SHA3_STATE_U64 * sizeof(*ep_saved));
 
         // Column-tile BBp = Sp×A + Ep': 8 columns at a time
         int8_t selector = 0;
@@ -424,40 +426,67 @@ int crypto_kem_dec_impl(unsigned char *ss, const unsigned char *ct, const unsign
         for (int q = 0; q < PARAMS_N; q += 8) {
             uint16_t ep_tile[8][8];
 
-            memcpy(work_st, ep_saved, FRODO_SHA3_STATE_U64 * sizeof(*work_st));
+            if (q != 0) {
+                // A generation reused hash_st, so restart the seedSE' stream
+                // and consume Sp to reach the beginning of Ep'.
+                OP_hash_init(alg, hash_st, (int)(state_words * sizeof(*hash_st)));
+                OP_hash_absorb(alg, hash_st, (int)(state_words * sizeof(*hash_st)),
+                               shake_input, 1 + BYTES_SEED_SE);
+                size_t sp_bytes = (size_t)PARAMS_N * PARAMS_NBAR * sizeof(uint16_t);
+                while (sp_bytes > 0) {
+                    size_t n = (sp_bytes > discard_len) ? discard_len : sp_bytes;
+                    OP_hash_squeeze(alg, hash_st, (int)(state_words * sizeof(*hash_st)),
+                                    discard, (int)n);
+                    sp_bytes -= n;
+                }
+            }
 
             // Squeeze Ep' for one column block, row by row.
-            // The SHAKE state is rewound to the start of Ep' for each q_block.
+            // The SHAKE stream starts at Ep' for every q_block.
             // For each row: skip q values to reach column q, read 8 values,
             // then skip the rest of the row (N-q-8 values) to reach the next row.
             for (int r = 0; r < PARAMS_NBAR; r++) {
                 // Skip to column q of current row (q uint16 = q*2 bytes)
-                int skip_col = (int)(q * sizeof(uint16_t));
+                size_t skip_col = (size_t)q * sizeof(uint16_t);
                 while (skip_col > 0) {
-                    int n = (skip_col > (int)sizeof(discard)) ? (int)sizeof(discard) : skip_col;
-                    OP_hash_squeeze(alg, work_st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*work_st)), discard, n);
+                    size_t n = (skip_col > discard_len) ? discard_len : skip_col;
+                    OP_hash_squeeze(alg, hash_st, (int)(state_words * sizeof(*hash_st)),
+                                    discard, (int)n);
                     skip_col -= n;
                 }
                 // Read 8 uint16 values for this row's tile
-                OP_hash_squeeze(alg, work_st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*work_st)),
+                OP_hash_squeeze(alg, hash_st, (int)(state_words * sizeof(*hash_st)),
                                 (uint8_t *)&ep_tile[r][0], (int)(8 * sizeof(uint16_t)));
                 for (int c = 0; c < 8; c++)
                     ep_tile[r][c] = LE_TO_UINT16(ep_tile[r][c]);
                 frodo_sample_n(&ep_tile[r][0], 8);
 
                 // Skip the rest of this row to reach the next row
-                int tail = (int)((PARAMS_N - q - 8) * sizeof(uint16_t));
+                size_t tail = (size_t)(PARAMS_N - q - 8) * sizeof(uint16_t);
                 while (tail > 0) {
-                    int n = (tail > (int)sizeof(discard)) ? (int)sizeof(discard) : tail;
-                    OP_hash_squeeze(alg, work_st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*work_st)), discard, n);
+                    size_t n = (tail > discard_len) ? discard_len : tail;
+                    OP_hash_squeeze(alg, hash_st, (int)(state_words * sizeof(*hash_st)),
+                                    discard, (int)n);
                     tail -= n;
                 }
+            }
+
+            // After the last Ep' replay, the stream is already at Epp'. Consume
+            // it now, before the same workspace is reinitialized for A.
+            if (q == PARAMS_N - 8) {
+                OP_hash_squeeze(alg, hash_st, (int)(state_words * sizeof(*hash_st)),
+                                (uint8_t *)Epp,
+                                (int)(PARAMS_NBAR * PARAMS_NBAR * sizeof(uint16_t)));
+                for (i = 0; i < (int)(PARAMS_NBAR * PARAMS_NBAR); i++)
+                    Epp[i] = LE_TO_UINT16(Epp[i]);
+                frodo_sample_n(Epp, PARAMS_NBAR * PARAMS_NBAR);
             }
 
             // Compute BBp_tile = Sp × A[:, q] + ep_tile
             uint16_t BBp_tile[8][8];
             memcpy(BBp_tile, ep_tile, sizeof(BBp_tile));
-            if (frodo_mul_add_sa_tile(BBp_tile, Sp, ep_tile, pk_seedA, q) == 0) {
+            if (frodo_mul_add_sa_tile(BBp_tile, Sp, pk_seedA, q,
+                                      hash_st, discard, discard_len) == 0) {
                 goto cleanup;
             }
 
@@ -476,22 +505,6 @@ int crypto_kem_dec_impl(unsigned char *ss, const unsigned char *ct, const unsign
             }
         }
 
-        // Squeeze Epp: from saved state, skip all Ep', then squeeze Epp
-        memcpy(sp_st, ep_saved, FRODO_SHA3_STATE_U64 * sizeof(*sp_st));
-        {
-            int ep_bytes = (int)(PARAMS_N * PARAMS_NBAR * sizeof(uint16_t));
-            while (ep_bytes > 0) {
-                int n = (ep_bytes > (int)sizeof(discard)) ? (int)sizeof(discard) : ep_bytes;
-                OP_hash_squeeze(alg, sp_st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*sp_st)), discard, n);
-                ep_bytes -= n;
-            }
-        }
-        OP_hash_squeeze(alg, sp_st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*sp_st)), (uint8_t *)Epp,
-                        (int)(PARAMS_NBAR * PARAMS_NBAR * sizeof(uint16_t)));
-        for (i = 0; i < (int)(PARAMS_NBAR * PARAMS_NBAR); i++)
-            Epp[i] = LE_TO_UINT16(Epp[i]);
-        frodo_sample_n(Epp, PARAMS_NBAR * PARAMS_NBAR);
-
         // Compute W = Sp*B + Epp (B unpacked on the fly from pk_b)
         frodo_mul_add_sb_plus_e(W, pk_b, Sp, Epp);
 
@@ -504,15 +517,10 @@ int crypto_kem_dec_impl(unsigned char *ss, const unsigned char *ct, const unsign
         ct_select(fin_k, (uint8_t*)kprime, (uint8_t*)sk_s, CRYPTO_BYTES, selector);
 
         clear_bytes(shake_input, sizeof(shake_input));
-        clear_bytes((uint8_t *)work_st, FRODO_SHA3_STATE_U64 * sizeof(*work_st));
-        clear_bytes((uint8_t *)ep_saved, FRODO_SHA3_STATE_U64 * sizeof(*ep_saved));
-        clear_bytes((uint8_t *)sp_st, FRODO_SHA3_STATE_U64 * sizeof(*sp_st));
-        free(work_st);
-        free(ep_saved);
-        free(sp_st);
-        work_st = NULL;
-        ep_saved = NULL;
-        sp_st = NULL;
+        clear_bytes((uint8_t *)hash_workspace,
+                    workspace_words * sizeof(*hash_workspace));
+        free(hash_workspace);
+        hash_workspace = NULL;
     }
     // ss = F(ct || k): stream ct then the selected k through the incremental hash operator.
     {
@@ -532,17 +540,10 @@ int crypto_kem_dec_impl(unsigned char *ss, const unsigned char *ct, const unsign
 
     // Cleanup:
 cleanup:
-    if (work_st != NULL) {
-        clear_bytes((uint8_t *)work_st, FRODO_SHA3_STATE_U64 * sizeof(*work_st));
-        free(work_st);
-    }
-    if (ep_saved != NULL) {
-        clear_bytes((uint8_t *)ep_saved, FRODO_SHA3_STATE_U64 * sizeof(*ep_saved));
-        free(ep_saved);
-    }
-    if (sp_st != NULL) {
-        clear_bytes((uint8_t *)sp_st, FRODO_SHA3_STATE_U64 * sizeof(*sp_st));
-        free(sp_st);
+    if (hash_workspace != NULL) {
+        clear_bytes((uint8_t *)hash_workspace,
+                    9 * FRODO_SHA3_STATE_U64 * sizeof(*hash_workspace));
+        free(hash_workspace);
     }
     if (W != NULL) {
         clear_bytes((uint8_t *)W, (size_t)PARAMS_NBAR * PARAMS_NBAR * sizeof(uint16_t));

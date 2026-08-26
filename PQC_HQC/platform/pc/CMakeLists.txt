@@ -26,7 +26,6 @@ set(HQC_COMMON_SOURCES
     ${COMMON_PATH}/vector.c
     ${COMMON_PATH}/crypto_memset.c
     ${COMMON_PATH}/fips202.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/soft/op_ntt.c
     ${CMAKE_CURRENT_SOURCE_DIR}/soft/endian.c
     ${CMAKE_CURRENT_SOURCE_DIR}/soft/op_hash.c
     ${CMAKE_CURRENT_SOURCE_DIR}/soft/op_matrix.c

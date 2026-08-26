@@ -283,39 +283,27 @@ void frodo_key_decode(uint16_t *out, const uint16_t *in)
 
 int frodo_mul_add_sa_tile(uint16_t out_tile[8][8],
                            const uint16_t *s,
-                           const uint16_t e_tile[8][8],
                            const uint8_t *seed_A,
-                           int col_block)
+                           int col_block,
+                           uint64_t hash_state[FRODO_SHA3_STATE_U64],
+                           uint8_t *discard,
+                           size_t discard_len)
 { // Low-memory column-tiled variant: compute one 8-column tile of s x A + e.
   // s:      N_BAR x N  (full, native endian)
-  // e_tile: N_BAR x 8  (pre-sampled error for these columns)
-  // out_tile: accumulator, caller must initialize from e_tile before calling.
+  // out_tile: accumulator, caller must initialize it from e before calling.
+  // Only one SHAKE128 state is active. Each A row is generated to completion
+  // before the same state workspace is reinitialized for the next row.
     int i_block;
 
     uint8_t seed_A_separated[2 + BYTES_SEED_A];
     memcpy(&seed_A_separated[2], seed_A, BYTES_SEED_A);
     uint16_t *seed_A_origin = (uint16_t *)&seed_A_separated;
 
-    uint64_t (*a_state)[FRODO_SHA3_STATE_U64] = malloc(8 * sizeof(*a_state));
-    if (a_state == NULL) {
+    if (hash_state == NULL || discard == NULL || discard_len == 0) {
         return 0;
     }
 
     for (i_block = 0; i_block < PARAMS_N; i_block += 8) {
-        // Initialize 8 SHAKE128 states for A rows i_block .. i_block+7
-        for (int r = 0; r < 8; r++) {
-            seed_A_origin[0] = UINT16_TO_LE((uint16_t)(i_block + r));
-            OP_hash_init(OP_ALG_SHAKE128, a_state[r], (int)sizeof(a_state[r]));
-            OP_hash_absorb(OP_ALG_SHAKE128, a_state[r], (int)sizeof(a_state[r]),
-                           seed_A_separated, 2 + BYTES_SEED_A);
-            // Skip preceding column blocks by squeezing & discarding
-            uint8_t discard[16];
-            for (int skip = 0; skip < col_block; skip += 8) {
-                OP_hash_squeeze(OP_ALG_SHAKE128, a_state[r], (int)sizeof(a_state[r]),
-                                discard, (int)sizeof(discard));
-            }
-        }
-
         // Read s[i_block] -- 8 consecutive columns of s (N_BAR rows x 8 cols)
         uint16_t x[8][8];
         for (int r = 0; r < PARAMS_NBAR; r++) {
@@ -324,11 +312,28 @@ int frodo_mul_add_sa_tile(uint16_t out_tile[8][8],
             }
         }
 
-        // Generate A[i_block][col_block] -- one 8x8 tile
+        // Generate A[i_block][col_block] one row at a time. Reinitializing the
+        // sole workspace means no SHAKE state ever has to be saved or restored.
         uint16_t y[8][8];
         for (int r = 0; r < 8; r++) {
+            seed_A_origin[0] = UINT16_TO_LE((uint16_t)(i_block + r));
+            OP_hash_init(OP_ALG_SHAKE128, hash_state,
+                         (int)(FRODO_SHA3_STATE_U64 * sizeof(*hash_state)));
+            OP_hash_absorb(OP_ALG_SHAKE128, hash_state,
+                           (int)(FRODO_SHA3_STATE_U64 * sizeof(*hash_state)),
+                           seed_A_separated, 2 + BYTES_SEED_A);
+
+            size_t skip_bytes = (size_t)col_block * sizeof(uint16_t);
+            while (skip_bytes > 0) {
+                size_t n = (skip_bytes > discard_len) ? discard_len : skip_bytes;
+                OP_hash_squeeze(OP_ALG_SHAKE128, hash_state,
+                                (int)(FRODO_SHA3_STATE_U64 * sizeof(*hash_state)),
+                                discard, (int)n);
+                skip_bytes -= n;
+            }
             uint8_t abuf[16];
-            OP_hash_squeeze(OP_ALG_SHAKE128, a_state[r], (int)sizeof(a_state[r]),
+            OP_hash_squeeze(OP_ALG_SHAKE128, hash_state,
+                            (int)(FRODO_SHA3_STATE_U64 * sizeof(*hash_state)),
                             abuf, (int)sizeof(abuf));
             for (int c = 0; c < 8; c++) {
                 y[r][c] = (uint16_t)(abuf[2 * c] | ((uint16_t)abuf[2 * c + 1] << 8));
@@ -340,8 +345,6 @@ int frodo_mul_add_sa_tile(uint16_t out_tile[8][8],
         if (OP_matrix_mul_8x8(z, (const uint16_t (*)[8])x,
                               (const uint16_t (*)[8])y,
                               (uint16_t)PARAMS_Q) != OP_SUCCESS) {
-            clear_bytes((uint8_t *)a_state, 8 * sizeof(*a_state));
-            free(a_state);
             return 0;
         }
         for (int r = 0; r < PARAMS_NBAR; r++) {
@@ -351,8 +354,6 @@ int frodo_mul_add_sa_tile(uint16_t out_tile[8][8],
         }
     }
 
-    clear_bytes((uint8_t *)a_state, 8 * sizeof(*a_state));
-    free(a_state);
     return 1;
 }
 

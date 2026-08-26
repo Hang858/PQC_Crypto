@@ -37,15 +37,18 @@ void frodo_key_decode(uint16_t *out, const uint16_t *in);
 
 // Low-memory column-tiled variant: computes one 8-column tile of (s¡ÁA + e).
 // s:        N_BAR ¡Á N matrix (full, native endian)
-// e_tile:   N_BAR ¡Á 8 pre-sampled error slice for these columns (native endian)
 // seed_A:   seed for A matrix generation (column-block by column-block)
 // col_block: starting column index (0, 8, 16, ¡­)
 // out_tile: accumulator (N_BAR ¡Á 8), initialized from e_tile by caller
+// hash_state: the caller-owned, single active SHAKE128 state
+// discard: caller-owned scratch used only for skipped SHAKE output
 int frodo_mul_add_sa_tile(uint16_t out_tile[8][8],
                            const uint16_t *s,
-                           const uint16_t e_tile[8][8],
                            const uint8_t *seed_A,
-                           int col_block);
+                           int col_block,
+                           uint64_t hash_state[FRODO_SHA3_STATE_U64],
+                           uint8_t *discard,
+                           size_t discard_len);
 
 // Low-memory keypair helpers:
 // 1) consume the post-S SHAKE stream and store sampled E packed in pk_b;

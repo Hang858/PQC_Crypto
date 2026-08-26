@@ -15,7 +15,7 @@ BASE_CFLAGS = -O3 -Wall -Wextra -Wpedantic -std=c99 \
 RUNTIME_CFLAGS = $(BASE_CFLAGS)
 
 COMMON_SRCS = code hqc kem parsing symmetric vector fft gf gf2x reed_muller reed_solomon hqc_params
-PLATFORM_SRCS = crypto_memset fips202 endian op_hash op_matrix op_trng op_fpr op_ntt sha256 sm3
+PLATFORM_SRCS = crypto_memset fips202 endian op_hash op_matrix op_trng op_fpr sha256 sm3
 
 LIB = libpqc_hqc.a
 TEST_EXE = test_hqc_ref
@@ -46,9 +46,6 @@ op_matrix.o:
 
 op_trng.o:
 	$(CC) $(BASE_CFLAGS) -c soft/op_trng.c -o $@
-
-op_ntt.o:
-	$(CC) $(BASE_CFLAGS) -c soft/op_ntt.c -o $@
 
 op_fpr.o:
 	$(CC) $(BASE_CFLAGS) -c soft/op_fpr.c -o $@
