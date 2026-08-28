@@ -153,7 +153,7 @@ int32_t kg_seed(unsigned char *pk, unsigned char *sk, unsigned char *seed)
 	keccak_state state;
     // shake256_absorb_once(&state, seeds + SEED_LEN, SEED_LEN);
 	OP_hash_init(3, &state.s, 200+8);
-    OP_hash_absorb(3, &state.s, 200+8, seed, p->seed_len);
+    OP_hash_absorb(3, &state.s, 200+8, seeds + p->seed_len, p->seed_len);
 	//generate  sk,e
 	gen_e(sk,&state);
 	gen_e(e,&state);

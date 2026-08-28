@@ -35,6 +35,19 @@ static uint32_t rej_uniform(uint8_t *r, uint32_t len, const uint8_t *buf, uint32
   return ctr;
 }
 
+static void op_shake256_squeezeblocks(uint8_t *out, size_t nblocks, keccak_state *state)
+{
+	uint32_t finalized = (uint32_t)(state->s[25] >> 63);
+	uint32_t pos = finalized ? (uint32_t)(state->s[25] & 0x7FFFFFFFULL) : SHAKE256_RATE;
+
+	if (finalized && pos != SHAKE256_RATE) {
+		uint8_t drop[SHAKE256_RATE];
+		OP_hash_squeeze(3, state->s, 200+8, drop, SHAKE256_RATE - pos);
+	}
+	OP_hash_squeeze(3, state->s, 200+8, out, nblocks * SHAKE256_RATE);
+	state->s[25] = (state->s[25] & 0x8000000000000000ULL) | pos;
+}
+
 // generate the public parameter a from seed
 int32_t gen_a(unsigned char *a, const unsigned char *seed)
 {
@@ -51,13 +64,16 @@ int32_t gen_a(unsigned char *a, const unsigned char *seed)
 		return -1;
 	}
 
-	OP_hash_squeeze(3, &state.s, 200+8, buf, buflen);
+	op_shake256_squeezeblocks(buf, buflen / SHAKE256_RATE, &state);
+	if (p->dim_n == 1024) {
+		OP_hash_squeeze(3, &state.s, 200+8, buf + 408, 44);
+	}
 
 	ctr = rej_uniform(a, p->dim_n, buf, buflen);
 	while(ctr < p->dim_n)
 	{
 		// shake256_squeezeblocks(buf, 1, &state);
-		OP_hash_squeeze(3, &state.s, 200+8, buf, 136);
+		op_shake256_squeezeblocks(buf, 1, &state);
 		buflen = SHAKE256_RATE;
 		ctr += rej_uniform(a + ctr, p->dim_n - ctr, buf, buflen);
 	}
@@ -84,7 +100,7 @@ int32_t gen_e(unsigned char *e, keccak_state *state)
 	}
 	memset(e, 0, p->dim_n);
 	if (polarlac_get_level() == POLARLAC_LEVEL_LIGHT) {
-		OP_hash_squeeze(3, state->s, 200+8, r, 136);
+		op_shake256_squeezeblocks(r, 1, state);
 		t = 0;
 		for (i = 0; i < 8; i++) {
 			for (j = 0; j < p->dim_n_8 * 2; j++) {
@@ -98,7 +114,7 @@ int32_t gen_e(unsigned char *e, keccak_state *state)
 
 		flag = 1;
 		while (flag) {
-			OP_hash_squeeze(3, state->s, 200+8, r, 128);
+			OP_hash_squeeze(3, state->s, 200+8, r, 64);
 			t = 0;
 			for (i = 0; i < 8; i++) {
 				for (j = 0; j < p->dim_n_8; j++) {
@@ -119,7 +135,7 @@ int32_t gen_e(unsigned char *e, keccak_state *state)
 			flag = (1 & (-mask)) | (flag & (~(-mask)));
 		}
 	} else if (polarlac_get_level() == POLARLAC_LEVEL_128) {
-		OP_hash_squeeze(3, state->s, 200+8, r, 128);
+		OP_hash_squeeze(3, state->s, 200+8, r, 64);
 		t = 0;
 		for (i = 0; i < 8; i++) {
 			for (j = 0; j < p->dim_n_8; j++) {
@@ -130,7 +146,7 @@ int32_t gen_e(unsigned char *e, keccak_state *state)
 
 		flag = 1;
 		while (flag) {
-			OP_hash_squeeze(3, state->s, 200+8, r, 128);
+			OP_hash_squeeze(3, state->s, 200+8, r, 64);
 			t = 0;
 			for (i = 0; i < 8; i++) {
 				for (j = 0; j < p->dim_n_8; j++) {
@@ -150,7 +166,7 @@ int32_t gen_e(unsigned char *e, keccak_state *state)
 			flag = (1 & (-mask)) | (flag & (~(-mask)));
 		}
 	} else if (polarlac_get_level() == POLARLAC_LEVEL_256) {
-		OP_hash_squeeze(3, state->s, 200+8, r, 272);
+		op_shake256_squeezeblocks(r, 2, state);
 		t = 0;
 		for (i = 0; i < 8; i++) {
 			for (j = 0; j < p->dim_n_8 * 2; j++) {
@@ -164,7 +180,7 @@ int32_t gen_e(unsigned char *e, keccak_state *state)
 
 		flag = 1;
 		while (flag) {
-			OP_hash_squeeze(3, state->s, 200+8, r, 136);
+			op_shake256_squeezeblocks(r, 1, state);
 			t = 0;
 			for (i = 0; i < 8; i++) {
 				for (j = 0; j < p->dim_n_8; j++) {
