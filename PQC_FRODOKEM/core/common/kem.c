@@ -410,8 +410,7 @@ int crypto_kem_dec_impl(unsigned char *ss, const unsigned char *ct, const unsign
         OP_hash_absorb(alg, hash_st, (int)(state_words * sizeof(*hash_st)),
                        shake_input, 1 + BYTES_SEED_SE);
 
-        // Squeeze Sp once and keep it for every BBp column tile. For q=0 the
-        // same state is already positioned at the beginning of Ep'.
+        // Squeeze Sp once and keep it for every BBp column tile.
         OP_hash_squeeze(alg, hash_st, (int)(state_words * sizeof(*hash_st)), (uint8_t *)Sp,
                         (int)(PARAMS_N * PARAMS_NBAR * sizeof(uint16_t)));
         for (i = 0; i < (int)(PARAMS_N * PARAMS_NBAR); i++)
@@ -426,19 +425,18 @@ int crypto_kem_dec_impl(unsigned char *ss, const unsigned char *ct, const unsign
         for (int q = 0; q < PARAMS_N; q += 8) {
             uint16_t ep_tile[8][8];
 
-            if (q != 0) {
-                // A generation reused hash_st, so restart the seedSE' stream
-                // and consume Sp to reach the beginning of Ep'.
-                OP_hash_init(alg, hash_st, (int)(state_words * sizeof(*hash_st)));
-                OP_hash_absorb(alg, hash_st, (int)(state_words * sizeof(*hash_st)),
-                               shake_input, 1 + BYTES_SEED_SE);
-                size_t sp_bytes = (size_t)PARAMS_N * PARAMS_NBAR * sizeof(uint16_t);
-                while (sp_bytes > 0) {
-                    size_t n = (sp_bytes > discard_len) ? discard_len : sp_bytes;
-                    OP_hash_squeeze(alg, hash_st, (int)(state_words * sizeof(*hash_st)),
-                                    discard, (int)n);
-                    sp_bytes -= n;
-                }
+            // Restart from seedSE' for every tile and consume Sp to reach the
+            // beginning of Ep'. This avoids depending on the previous stream
+            // position, since hash_st is reused for A generation below.
+            OP_hash_init(alg, hash_st, (int)(state_words * sizeof(*hash_st)));
+            OP_hash_absorb(alg, hash_st, (int)(state_words * sizeof(*hash_st)),
+                           shake_input, 1 + BYTES_SEED_SE);
+            size_t sp_bytes = (size_t)PARAMS_N * PARAMS_NBAR * sizeof(uint16_t);
+            while (sp_bytes > 0) {
+                size_t n = (sp_bytes > discard_len) ? discard_len : sp_bytes;
+                OP_hash_squeeze(alg, hash_st, (int)(state_words * sizeof(*hash_st)),
+                                discard, (int)n);
+                sp_bytes -= n;
             }
 
             // Squeeze Ep' for one column block, row by row.
