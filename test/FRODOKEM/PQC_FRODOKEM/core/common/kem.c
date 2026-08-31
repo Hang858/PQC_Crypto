@@ -16,11 +16,13 @@
 // squeezed incrementally so Ep' can be written straight into the caller's Bp/BBp buffer
 // (ep_out)  no standalone Ep matrix is ever held. Byte-for-byte identical to the one-shot
 // expansion it replaces.
-static int frodo_gen_sp_ep_epp(uint16_t *Sp, uint16_t *ep_out, uint16_t *Epp, const uint8_t *seedSE)
+static int frodo_gen_sp_pack_ep_epp(uint16_t *Sp, uint8_t *ep_packed, uint16_t *Epp, const uint8_t *seedSE)
 {
     uint8_t shake_input[1 + BYTES_SEED_SE];
     uint64_t *st = malloc(FRODO_SHA3_STATE_U64 * sizeof(*st));
     uint8_t alg = frodokem_shake_alg();
+    const size_t group_bytes = (size_t)PARAMS_NBAR * PARAMS_LOGQ / 8;
+    const size_t row_stride = (size_t)(PARAMS_N / 8) * group_bytes;
 
     if (st == NULL) {
         return 0;
@@ -35,9 +37,17 @@ static int frodo_gen_sp_ep_epp(uint16_t *Sp, uint16_t *ep_out, uint16_t *Epp, co
     for (size_t i = 0; i < (size_t)PARAMS_N * PARAMS_NBAR; i++) Sp[i] = LE_TO_UINT16(Sp[i]);
     frodo_sample_n(Sp, PARAMS_N * PARAMS_NBAR);
 
-    OP_hash_squeeze(alg, st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*st)), (uint8_t *)ep_out, (int)(PARAMS_N * PARAMS_NBAR * sizeof(uint16_t)));
-    for (size_t i = 0; i < (size_t)PARAMS_N * PARAMS_NBAR; i++) ep_out[i] = LE_TO_UINT16(ep_out[i]);
-    frodo_sample_n(ep_out, PARAMS_N * PARAMS_NBAR);
+    for (int r = 0; r < PARAMS_NBAR; r++) {
+        for (int q = 0; q < PARAMS_N; q += 8) {
+            uint16_t ep_tile[8];
+            OP_hash_squeeze(alg, st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*st)),
+                            (uint8_t *)ep_tile, (int)sizeof(ep_tile));
+            for (int c = 0; c < 8; c++) ep_tile[c] = LE_TO_UINT16(ep_tile[c]);
+            frodo_sample_n(ep_tile, 8);
+            frodo_pack(ep_packed + (size_t)r * row_stride + (size_t)(q / 8) * group_bytes,
+                       group_bytes, ep_tile, PARAMS_NBAR, PARAMS_LOGQ);
+        }
+    }
 
     OP_hash_squeeze(alg, st, (int)(FRODO_SHA3_STATE_U64 * sizeof(*st)), (uint8_t *)Epp, (int)(PARAMS_NBAR * PARAMS_NBAR * sizeof(uint16_t)));
     for (size_t i = 0; i < (size_t)PARAMS_NBAR * PARAMS_NBAR; i++) Epp[i] = LE_TO_UINT16(Epp[i]);
@@ -196,20 +206,11 @@ int crypto_kem_enc_impl(unsigned char *ct, unsigned char *ss, const unsigned cha
 //    LOG_A("mu", mu, BYTES_MU + BYTES_SALT);
     shake(G2out, BYTES_SEED_SE + CRYPTO_BYTES, G2in, BYTES_PKHASH + BYTES_MU + BYTES_SALT);
 //    LOG_A("G2out", G2out, BYTES_SEED_SE + CRYPTO_BYTES);
-    // Use original full-Bp approach (tiled frodo_mul_add_sa_tile debugged separately)
-    {
-        uint16_t *Bp = (uint16_t *)malloc((size_t)PARAMS_N * PARAMS_NBAR * sizeof(uint16_t));
-        if (Bp == NULL) goto cleanup;
-        if (frodo_gen_sp_ep_epp(Sp, Bp, Epp, seedSE) == 0) {
-            free(Bp);
-            goto cleanup;
-        }
-        if (frodo_mul_add_sa_plus_e(Bp, Sp, pk_seedA) == 0) {
-            free(Bp);
-            goto cleanup;
-        }
-        frodo_pack(ct_c1, (PARAMS_LOGQ*PARAMS_N*PARAMS_NBAR)/8, Bp, PARAMS_N*PARAMS_NBAR, PARAMS_LOGQ);
-        free(Bp);
+    if (frodo_gen_sp_pack_ep_epp(Sp, ct_c1, Epp, seedSE) == 0) {
+        goto cleanup;
+    }
+    if (frodo_mul_add_sa_plus_packed_e(ct_c1, Sp, pk_seedA) == 0) {
+        goto cleanup;
     }
 
     // Compute V = Sp*B + Epp (B unpacked on the fly from pk_b)
