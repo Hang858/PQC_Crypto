@@ -1,0 +1,70 @@
+密钥生成--frodo_mul_add_as_plus_e_from_sk  安全级别1、2、3
+加密、解密--frodo_mul_add_sa_plus_e 安全级别1、2
+
+安全级别3
+加密--frodo_mul_add_sa_plus_e
+解密--frodo_mul_add_sa_tile 
+
+[16:22:51.371]收←◆randomness (112 bytes):0d54a87d909dd56787d200bc26ec13542502da3c9facb73dab6784e2020b7988c90de7881d22831324ee7be71cae8dfaece5c3499150aada222c2f992bf59c16f416208e8f1d85cb1adfb5218ec14022db5923fdf0604ed5220f780431f2f96e783b7a0f2981a9096722138f519004d4
+pk_seedA (16 bytes):3de9b3546e820e7245626b1b1108a2a9
+
+[16:22:51.681]收←◆frodo_mul_add_as_plus_e_from_sk--A_row (16 bytes):09447f7392731cef57a0fab6709b566c
+frodo_mul_add_as_plus_e_from_sk--A_row (16 bytes):5dc8581f34d3d5475425decb749a5856
+frodo_mul_add_as_plus_e_from_sk--A_row (16 bytes):8e6f8fe5bb89485f0d32c5ac8b13d70b
+frodo_mul_add_as_plus_e_from_sk--A_row (16 bytes):d39aa933789cddb9dcbab908061ac272
+frodo_mul_add_as_plus_e_from_sk--A_row (16 bytes):4e7df4f6ccad8556d5145591b4f22189
+frodo_mul_add_as_plus_e_from_sk--A_row (16 bytes):132526497f018497df62b6da736f5901
+frodo_mul_add_as_plus_e_from_sk--A_row (16 bytes):764f1fe00009d141efa724a4c6c535f4
+frodo_mul_add_as_plus_e_from_sk--A_row (16 bytes):89be105f4fa4077d803748f2a7998bfd
+
+
+[16:23:57.902]收←◆en-abuf (16 bytes):09447f7392731cef57a0fab6709b566c
+en-abuf (16 bytes):5dc8581f34d3d5475425decb749a5856
+en-abuf (16 bytes):8e6f8fe5bb89485f0d32c5ac8b13d70b
+en-abuf (16 bytes):d39aa933789cddb9dcbab908061ac272
+en-abuf (16 bytes):4e7df4f6ccad8556d5145591b4f22189
+en-abuf (16 bytes):132526497f018497df62b6da736f5901
+en-abuf (16 bytes):764f1fe00009d141efa724a4c6c535f4
+en-abuf (16 bytes):89be105f4fa4077d803748f2a7998bfd
+
+[16:24:44.561]收←◆frodo_mul_add_sa_tile--abuf (16 bytes):09447f7392731cef57a0fab6709b566c
+frodo_mul_add_sa_tile--abuf (16 bytes):5dc8581f34d3d5475425decb749a5856
+frodo_mul_add_sa_tile--abuf (16 bytes):8e6f8fe5bb89485f0d32c5ac8b13d70b
+frodo_mul_add_sa_tile--abuf (16 bytes):d39aa933789cddb9dcbab908061ac272
+frodo_mul_add_sa_tile--abuf (16 bytes):4e7df4f6ccad8556d5145591b4f22189
+frodo_mul_add_sa_tile--abuf (16 bytes):132526497f018497df62b6da736f5901
+frodo_mul_add_sa_tile--abuf (16 bytes):764f1fe00009d141efa724a4c6c535f4
+frodo_mul_add_sa_tile--abuf (16 bytes):89be105f4fa4077d803748f2a7998bfd
+
+
+
+[16:38:19.933]收←◆randomness (112 bytes):0d54a87d909dd56787d200bc26ec13542502da3c9facb73dab6784e2020b7988c90de7881d22831324ee7be71cae8dfaece5c3499150aada222c2f992bf59c16f416208e8f1d85cb1adfb5218ec14022db5923fdf0604ed5220f780431f2f96e783b7a0f2981a9096722138f519004d4
+pk_seedA (16 bytes):3de9b3546e820e7245626b1b1108a2a9
+
+[16:38:20.556]收←◆frodo_mul_add_as_plus_e_from_sk--A_row (16 bytes):3897e3f2ef26e4e8aac2e1e5d1eb1a9b
+frodo_mul_add_as_plus_e_from_sk--A_row (16 bytes):6ad7ad14bf62e1a14247ad266a27d4fe
+frodo_mul_add_as_plus_e_from_sk--A_row (16 bytes):fbe9bb759b490e388f3f8441016ce84b
+frodo_mul_add_as_plus_e_from_sk--A_row (16 bytes):cd904bf35930d22357d19c8eb810f2c9
+frodo_mul_add_as_plus_e_from_sk--A_row (16 bytes):d3c97577f7a14e1890a2fb91217766bf
+frodo_mul_add_as_plus_e_from_sk--A_row (16 bytes):cbdc1d9ba938ebd4645ba56c29210881
+frodo_mul_add_as_plus_e_from_sk--A_row (16 bytes):98fb34c552e2a06885e7e4915c963a8b
+frodo_mul_add_as_plus_e_from_sk--A_row (16 bytes):b96ddd26ae80e30ae2d3f75de865877b
+
+[16:39:24.199]收←◆en-abuf (16 bytes):3897e3f2ef26e4e8aac2e1e5d1eb1a9b
+en-abuf (16 bytes):6ad7ad14bf62e1a14247ad266a27d4fe
+en-abuf (16 bytes):fbe9bb759b490e388f3f8441016ce84b
+en-abuf (16 bytes):cd904bf35930d22357d19c8eb810f2c9
+en-abuf (16 bytes):d3c97577f7a14e1890a2fb91217766bf
+en-abuf (16 bytes):cbdc1d9ba938ebd4645ba56c29210881
+en-abuf (16 bytes):98fb34c552e2a06885e7e4915c963a8b
+en-abuf (16 bytes):b96ddd26ae80e30ae2d3f75de865877b
+
+[16:40:11.216]收←◆frodo_mul_add_sa_tile--abuf (16 bytes):3897e3f2ef26e4e8aac2e1e5d1eb1a9b
+frodo_mul_add_sa_tile--abuf (16 bytes):d94a3dc8b355e0149a6e2de5503043ff
+frodo_mul_add_sa_tile--abuf (16 bytes):9eba880305b29fe340073389828918e5
+frodo_mul_add_sa_tile--abuf (16 bytes):2283b67fe66a33135634aabb306ef0d4
+frodo_mul_add_sa_tile--abuf (16 bytes):0f5c1671a201b27d97a4a76df02368f4
+frodo_mul_add_sa_tile--abuf (16 bytes):0a1856032e6a77ea1ac22af2f8c6dff2
+frodo_mul_add_sa_tile--abuf (16 bytes):1765ebe041caa699e8fbd79357e8579a
+frodo_mul_add_sa_tile--abuf (16 bytes):76fb0a6d85ce8dc2a44853ee20db6c82
+
