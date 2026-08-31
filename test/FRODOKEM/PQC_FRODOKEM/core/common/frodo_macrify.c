@@ -95,20 +95,13 @@ int frodo_mul_add_sa_plus_e(uint16_t *out, const uint16_t *s, const uint8_t *see
     uint16_t* seed_A_origin = (uint16_t*)&seed_A_separated;
     memcpy(&seed_A_separated[2], seed_A, BYTES_SEED_A);
 
-    // Eight SHAKE states occupy 1,664 B. Keep this workspace off the
-    // embedded stack and reuse it for every row block in this invocation.
-    uint64_t (*a_state)[FRODO_SHA3_STATE_U64] = malloc(8 * sizeof(*a_state));
+    uint64_t *a_state = malloc(FRODO_SHA3_STATE_U64 * sizeof(*a_state));
     if (a_state == NULL) {
         return 0;
     }
+    uint8_t discard[128];
 
     for (i = 0; i < PARAMS_N; i += 8) {
-        for (int r = 0; r < 8; r++) {
-            seed_A_origin[0] = UINT16_TO_LE(i + r);
-            OP_hash_init(OP_ALG_SHAKE128, a_state[r], (int)sizeof(a_state[r]));
-            OP_hash_absorb(OP_ALG_SHAKE128, a_state[r], (int)sizeof(a_state[r]), seed_A_separated, 2 + BYTES_SEED_A);
-        }
-
         uint16_t x[8][8];
         for (int r = 0; r < PARAMS_NBAR; r++) {
             for (int c = 0; c < 8; c++) {
@@ -119,8 +112,26 @@ int frodo_mul_add_sa_plus_e(uint16_t *out, const uint16_t *s, const uint8_t *see
         for (q_block = 0; q_block < PARAMS_N; q_block += 8) {
             uint16_t y[8][8];
             for (int r = 0; r < 8; r++) {
+                seed_A_origin[0] = UINT16_TO_LE(i + r);
+                OP_hash_init(OP_ALG_SHAKE128, a_state,
+                             (int)(FRODO_SHA3_STATE_U64 * sizeof(*a_state)));
+                OP_hash_absorb(OP_ALG_SHAKE128, a_state,
+                               (int)(FRODO_SHA3_STATE_U64 * sizeof(*a_state)),
+                               seed_A_separated, 2 + BYTES_SEED_A);
+
+                size_t skip_bytes = (size_t)q_block * sizeof(uint16_t);
+                while (skip_bytes > 0) {
+                    size_t n = (skip_bytes > sizeof(discard)) ? sizeof(discard) : skip_bytes;
+                    OP_hash_squeeze(OP_ALG_SHAKE128, a_state,
+                                    (int)(FRODO_SHA3_STATE_U64 * sizeof(*a_state)),
+                                    discard, (int)n);
+                    skip_bytes -= n;
+                }
+
                 uint8_t abuf[16];  // 8 uint16 of row (i+r), columns q_block..q_block+7
-                OP_hash_squeeze(OP_ALG_SHAKE128, a_state[r], (int)sizeof(a_state[r]), abuf, (int)sizeof(abuf));
+                OP_hash_squeeze(OP_ALG_SHAKE128, a_state,
+                                (int)(FRODO_SHA3_STATE_U64 * sizeof(*a_state)),
+                                abuf, (int)sizeof(abuf));
 //                if(((PARAMS_N-1)==i)&&((PARAMS_N-1)==q_block))
                 if((8==i)&&(8==q_block))
                 {
@@ -134,7 +145,7 @@ int frodo_mul_add_sa_plus_e(uint16_t *out, const uint16_t *s, const uint8_t *see
 
             uint16_t z[8][8];
             if (OP_matrix_mul_8x8(z, (const uint16_t (*)[8])x, (const uint16_t (*)[8])y, (uint16_t)PARAMS_Q) != OP_SUCCESS) {
-                clear_bytes((uint8_t *)a_state, 8 * sizeof(*a_state));
+                clear_bytes((uint8_t *)a_state, FRODO_SHA3_STATE_U64 * sizeof(*a_state));
                 free(a_state);
                 return 0;
             }
@@ -146,7 +157,7 @@ int frodo_mul_add_sa_plus_e(uint16_t *out, const uint16_t *s, const uint8_t *see
         }
     }
 
-    clear_bytes((uint8_t *)a_state, 8 * sizeof(*a_state));
+    clear_bytes((uint8_t *)a_state, FRODO_SHA3_STATE_U64 * sizeof(*a_state));
     free(a_state);
     return 1;
 }
