@@ -146,16 +146,6 @@ int frodo_mul_add_sa_plus_e(uint16_t *out, const uint16_t *s, const uint8_t *see
                 for (int c = 0; c < 8; c++) {
                     y[r][c] = a_rows[(size_t)r * PARAMS_N + (q_block + c)];
                 }
-//                if(((PARAMS_N-1)==i)&&((PARAMS_N-1)==q_block))
-                if((8==i)&&(8==q_block))
-                {
-                    uint8_t abuf[16];  // 8 uint16 of row (i+r), columns q_block..q_block+7
-                    for (int c = 0; c < 8; c++) {
-                        abuf[2*c] = (uint8_t)y[r][c];
-                        abuf[2*c + 1] = (uint8_t)(y[r][c] >> 8);
-                    }
-                	LOG_A("en-abuf", abuf, (int)sizeof(abuf));
-                }
             }
 
             uint16_t z[8][8];
