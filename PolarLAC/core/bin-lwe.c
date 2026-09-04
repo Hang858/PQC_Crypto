@@ -37,15 +37,7 @@ static uint32_t rej_uniform(uint8_t *r, uint32_t len, const uint8_t *buf, uint32
 
 static void op_shake256_squeezeblocks(uint8_t *out, size_t nblocks, keccak_state *state)
 {
-	uint32_t finalized = (uint32_t)(state->s[25] >> 63);
-	uint32_t pos = finalized ? (uint32_t)(state->s[25] & 0x7FFFFFFFULL) : SHAKE256_RATE;
-
-	if (finalized && pos != SHAKE256_RATE) {
-		uint8_t drop[SHAKE256_RATE];
-		OP_hash_squeeze(3, state->s, 200+8, drop, SHAKE256_RATE - pos);
-	}
 	OP_hash_squeeze(3, state->s, 200+8, out, nblocks * SHAKE256_RATE);
-	state->s[25] = (state->s[25] & 0x8000000000000000ULL) | pos;
 }
 
 // generate the public parameter a from seed
