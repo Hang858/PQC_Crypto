@@ -229,12 +229,8 @@ int32_t test_mul_correctness()
 
 	gen_a(uinta,seeds);
 
-	keccak_state state;
-    // shake256_absorb_once(&state, seeds + SEED_LEN, SEED_LEN);
-	OP_hash_init(3, &state.s, 200+8);
-    OP_hash_absorb(3, &state.s, 200+8, seed, p->seed_len);
 	//generate  sk,e
-	gen_e(uints,&state);
+	gen_e(uints, seed);
 
 	int32_t i;
 	for(i=0;i < p->dim_n;i++)
@@ -310,7 +306,7 @@ int32_t test_mul_correctness()
 		free(uints2);
 		return -1;
 	}
-	gen_e(e,&state);
+	gen_e(e, seed);
 
 	for(i=0;i < p->dim_n;i++)
 	{

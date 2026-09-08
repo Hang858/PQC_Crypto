@@ -123,40 +123,31 @@ int32_t crypto_encrypt_keypair( unsigned char *pk, unsigned char *sk)
 int32_t kg_seed(unsigned char *pk, unsigned char *sk, unsigned char *seed)
 {
 	const polarlac_params_t *p = polarlac_current_params();
-	unsigned char *seeds = my_malloc(2 * p->seed_len);
 	unsigned char *a = my_malloc(p->dim_n);
 	unsigned char *e = my_malloc(p->dim_n);
 	unsigned char h_pk[HASHLEN];
 	//check pointer
 	if(pk==NULL || sk==NULL)
 	{
-		my_free(seeds);
 		my_free(a);
 		my_free(e);
 		return -1;
 	}
-	if (seeds == NULL || a == NULL || e == NULL) {
-		my_free(seeds);
+	if (a == NULL || e == NULL) {
 		my_free(a);
 		my_free(e);
 		return -1;
 	}
 
-	//generate two seeds for a,sk,e
-	// sha3_512(seeds, seed, SEED_LEN);
-	OP_hash(7, 0, 64, seed, p->seed_len, 0, seeds);
-	memcpy(pk,seeds,p->seed_len);
+	OP_hash(OP_ALG_SHAKE256, OP_MODE_NORMAL, 3 * p->seed_len,
+		seed, p->seed_len, 0, e);
+	memcpy(pk, e, p->seed_len);
 
 	//generate a
-	gen_a(a,seeds);//print_bytes(sk,CRYPTO_SECRETKEYBYTES);
-
-	keccak_state state;
-    // shake256_absorb_once(&state, seeds + SEED_LEN, SEED_LEN);
-	OP_hash_init(3, &state.s, 200+8);
-    OP_hash_absorb(3, &state.s, 200+8, seeds + p->seed_len, p->seed_len);
+	gen_a(a, e);
 	//generate  sk,e
-	gen_e(sk,&state);
-	gen_e(e,&state);
+	gen_e(sk, e + p->seed_len);
+	gen_e(e, e + 2 * p->seed_len);
 	//compute pk=a*sk+e
 	poly_aff(a,sk,e,pk + p->seed_len, p->dim_n);
 	//copy pk=as+e to the second part of sk, now sk=s|pk
@@ -165,7 +156,6 @@ int32_t kg_seed(unsigned char *pk, unsigned char *sk, unsigned char *seed)
 	OP_hash(5, 0, 32, pk, p->pk_len, 0, h_pk);
 	memcpy(sk + p->sk_part_len + p->pk_len, h_pk, HASHLEN);
 
-	my_free(seeds);
 	my_free(a);
 	my_free(e);
 	return 0;
@@ -255,16 +245,14 @@ int32_t original_pke_enc_seed(const unsigned char *pk, const unsigned char *m, u
 
 	//generate  a from seed in the first part of pk
 	gen_a(a,pk);
-	keccak_state state;
-    // shake256_absorb_once(&state, seed, SEED_LEN);
-	OP_hash_init(3, &state.s, 200+8);
-    OP_hash_absorb(3, &state.s, 200+8, seed, p->seed_len);
+	OP_hash(OP_ALG_SHAKE256, OP_MODE_NORMAL, 3 * p->seed_len,
+		seed, p->seed_len, 0, c2);
 	//generate random vector r
-	gen_e(r,&state);
+	gen_e(r, c2);
 	//generate error vector e1
-	gen_e(e1,&state);
+	gen_e(e1, c2 + p->seed_len);
 	//generate error vector e2
-	gen_e(e2,&state);
+	gen_e(e2, c2 + 2 * p->seed_len);
 
 	/* FOR POLAR */
 	//encode message to e2

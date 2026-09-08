@@ -8,7 +8,7 @@
 //generate the public parameter a from seed
 int32_t gen_a(unsigned char *a,  const unsigned char *seed);
 //generate the small random vector for secret and error
-int32_t gen_e(unsigned char *e, keccak_state *state);
+int32_t gen_e(unsigned char *e, const unsigned char *seed);
 
 // poly_mul  b=[as]
 int32_t poly_mul(const unsigned char *a, const unsigned char *s, unsigned char *b, uint32_t  vec_num);

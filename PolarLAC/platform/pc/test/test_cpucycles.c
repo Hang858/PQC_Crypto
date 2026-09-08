@@ -239,13 +239,10 @@ int32_t test_gen_psi_cpucycles()
 		return -1;
 	}
 	random_bytes(seed, p->seed_len);
-	keccak_state state;
-    shake256_absorb_once(&state, seed, p->seed_len);
-
 	t0 = cpucycles();
 	for (i = 0; i < loop; i++)
 	{
-		gen_e(e, &state);
+		gen_e(e, seed);
 	}
 	t1 = cpucycles();
 	LOG_D("gen_e cpucycles: ");
@@ -312,9 +309,7 @@ int32_t test_poly_mul_cpucycles()
 
 	random_bytes(a, p->dim_n);
 	random_bytes(seed, p->seed_len);
-	keccak_state state;
-    shake256_absorb_once(&state, seed, p->seed_len);
-	gen_e(sk, &state);
+	gen_e(sk, seed);
 
 	sum = 0;
 	for (i = 0; i < loop; i++)
@@ -356,9 +351,7 @@ int32_t test_init()
 
 	random_bytes(a, p->dim_n);
 	random_bytes(seed, p->seed_len);
-	keccak_state state;
-    shake256_absorb_once(&state, seed, p->seed_len);
-	gen_e(sk, &state);
+	gen_e(sk, seed);
 
 	for (i = 0; i < loop; i++)
 	{

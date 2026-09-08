@@ -41,9 +41,7 @@ int32_t test_poly_mul_speed()
 
 	random_bytes(a, p->dim_n);
 	random_bytes(seed, p->seed_len);
-	keccak_state state;
-    shake256_absorb_once(&state, seed, p->seed_len);
-	gen_e(sk,&state);
+	gen_e(sk, seed);
 
     start=POLARLAC_CLOCK();
     for(i=0;i<NTESTS;i++)

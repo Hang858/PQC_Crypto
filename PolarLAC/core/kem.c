@@ -33,7 +33,6 @@ int32_t kem_enc_fo(const unsigned char *pk, unsigned char *k, unsigned char *c)
 	const polarlac_params_t *p = polarlac_current_params();
 	unsigned char *buf = my_malloc(p->message_len + p->cipher_len);
 	unsigned char *seed = my_malloc(p->seed_len);
-	unsigned char *seed_buf = my_malloc(p->message_len + p->seed_len);
 	uint64_t clen;
 
 	//check parameter
@@ -41,13 +40,11 @@ int32_t kem_enc_fo(const unsigned char *pk, unsigned char *k, unsigned char *c)
 	{
 		my_free(buf);
 		my_free(seed);
-		my_free(seed_buf);
 		return -1;
 	}
-	if (buf == NULL || seed == NULL || seed_buf == NULL) {
+	if (buf == NULL || seed == NULL) {
 		my_free(buf);
 		my_free(seed);
-		my_free(seed_buf);
 		return -1;
 	}
 
@@ -55,10 +52,9 @@ int32_t kem_enc_fo(const unsigned char *pk, unsigned char *k, unsigned char *c)
 	// random_bytes(buf,MESSAGE_LEN);
 	OP_trng(buf, p->message_len);
 	//compute seed=hash(m|pk), add pk for multi key attack protection
-	memcpy(seed_buf, buf, p->message_len);
-	memcpy(seed_buf + p->message_len, pk, p->seed_len);
+	memcpy(buf + p->message_len, pk, p->pk_len);
 	// sha3_256(seed,seed_buf,MESSAGE_LEN+SEED_LEN);
-	OP_hash(5, 0, 32, seed_buf, p->message_len + p->seed_len, 0, seed);
+	OP_hash(5, 0, 32, buf, p->message_len + p->pk_len, 0, seed);
 	//encrypt m with seed
 	original_pke_enc_seed(pk, buf, p->message_len, c, &clen, seed);
 
@@ -69,7 +65,6 @@ int32_t kem_enc_fo(const unsigned char *pk, unsigned char *k, unsigned char *c)
 
 	my_free(buf);
 	my_free(seed);
-	my_free(seed_buf);
 	return 0;
 }
 
@@ -79,7 +74,6 @@ int32_t kem_enc_fo_seed(const unsigned char *pk, unsigned char *k, unsigned char
 	const polarlac_params_t *p = polarlac_current_params();
 	unsigned char *buf = my_malloc(p->message_len + p->cipher_len);
 	unsigned char *local_seed = my_malloc(p->seed_len);
-	unsigned char *seed_buf = my_malloc(p->message_len + p->seed_len);
 	uint64_t clen;
 
 
@@ -88,28 +82,21 @@ int32_t kem_enc_fo_seed(const unsigned char *pk, unsigned char *k, unsigned char
 	{
 		my_free(buf);
 		my_free(local_seed);
-		my_free(seed_buf);
 		return -1;
 	}
-	if (buf == NULL || local_seed == NULL || seed_buf == NULL) {
+	if (buf == NULL || local_seed == NULL) {
 		my_free(buf);
 		my_free(local_seed);
-		my_free(seed_buf);
 		return -1;
 	}
 
 	//generate random message m, stored in buf
-	keccak_state state;
-    // shake256_absorb_once(&state, seed, SEED_LEN);
-	OP_hash_init(3, &state.s, 200+8);
-    OP_hash_absorb(3, &state.s, 200+8, seed, p->seed_len);
-	// shake256_squeeze(buf, MESSAGE_LEN, &state);
-	OP_hash_squeeze(3, &state.s, 200+8, buf, p->message_len);
+	OP_hash(OP_ALG_SHAKE256, OP_MODE_NORMAL, p->message_len,
+		seed, p->seed_len, 0, buf);
 	//compute loacal_seed=hash(m|pk), add pk for multi key attack protection
-	memcpy(seed_buf, buf, p->message_len);
-	memcpy(seed_buf + p->message_len, pk, p->seed_len);
+	memcpy(buf + p->message_len, pk, p->pk_len);
 	// sha3_256(local_seed,seed_buf,MESSAGE_LEN+SEED_LEN);
-	OP_hash(5, 0, 32, seed_buf, p->message_len + p->seed_len, 0, local_seed);
+	OP_hash(5, 0, 32, buf, p->message_len + p->pk_len, 0, local_seed);
 	//encrypt m with local_seed
 	original_pke_enc_seed(pk, buf, p->message_len, c, &clen, local_seed);
 
@@ -120,7 +107,6 @@ int32_t kem_enc_fo_seed(const unsigned char *pk, unsigned char *k, unsigned char
 
 	my_free(buf);
 	my_free(local_seed);
-	my_free(seed_buf);
 	return 0;
 }
 
@@ -130,7 +116,6 @@ int32_t kem_dec_fo(const unsigned char *pk, const unsigned char *sk, const unsig
 	const polarlac_params_t *p = polarlac_current_params();
 	unsigned char *buf = my_malloc(p->message_len + p->cipher_len);
 	unsigned char *seed = my_malloc(p->seed_len);
-	unsigned char *seed_buf = my_malloc(p->message_len + p->seed_len);
 	uint64_t mlen,clen;
 	unsigned char *c_v = my_malloc(p->cipher_len);
 
@@ -139,14 +124,12 @@ int32_t kem_dec_fo(const unsigned char *pk, const unsigned char *sk, const unsig
 	{
 		my_free(buf);
 		my_free(seed);
-		my_free(seed_buf);
 		my_free(c_v);
 		return -1;
 	}
-	if (buf == NULL || seed == NULL || seed_buf == NULL || c_v == NULL) {
+	if (buf == NULL || seed == NULL || c_v == NULL) {
 		my_free(buf);
 		my_free(seed);
-		my_free(seed_buf);
 		my_free(c_v);
 		return -1;
 	}
@@ -158,10 +141,9 @@ int32_t kem_dec_fo(const unsigned char *pk, const unsigned char *sk, const unsig
 	// sha3_256(k,buf,MESSAGE_LEN+CIPHER_LEN);
 	OP_hash(5, 0, 32, buf, p->message_len + p->cipher_len, 0, k);
 	//re-encryption with seed=hash(m|pk), add pk for multi key attack protection
-	memcpy(seed_buf, buf, p->message_len);
-	memcpy(seed_buf + p->message_len, pk, p->seed_len);
+	memcpy(buf + p->message_len, pk, p->pk_len);
 	// sha3_256(seed,seed_buf,MESSAGE_LEN+SEED_LEN);
-	OP_hash(5, 0, 32, seed_buf, p->message_len + p->seed_len, 0, seed);
+	OP_hash(5, 0, 32, buf, p->message_len + p->pk_len, 0, seed);
 	original_pke_enc_seed(pk, buf, p->message_len, c_v, &clen, seed);
 
 	//verify
@@ -177,7 +159,6 @@ int32_t kem_dec_fo(const unsigned char *pk, const unsigned char *sk, const unsig
 
 	my_free(buf);
 	my_free(seed);
-	my_free(seed_buf);
 	my_free(c_v);
 	return 0;
 }
