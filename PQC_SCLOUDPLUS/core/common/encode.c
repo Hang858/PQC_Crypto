@@ -660,20 +660,19 @@ if (SCLOUDPLUS_L == 128) {
 
 void scloudplus_compressc2(uint16_t *C, uint16_t *out)
 {
-    uint32_t remainder;
 if (SCLOUDPLUS_L == 128 || SCLOUDPLUS_L == 256) {
     for (int i = 0; i < SCLOUDPLUS_MBAR * SCLOUDPLUS_NBAR; i++)
     {
         uint32_t temp = ((((uint32_t)(C[i] & 0xFFF) << 7) + 2048) >> 12);
-        remainder = (C[i]%64==48);
-        out[i] = (temp - remainder) & 0x7F;
+        uint32_t remainder = (((uint32_t)(C[i] & 0xFFF) << 7) + 2048) % 6144;
+        out[i] = (temp - (remainder == 0)) & 0x7F;
     }
 } else if (SCLOUDPLUS_L == 192) {
     for (int i = 0; i < SCLOUDPLUS_MBAR * SCLOUDPLUS_NBAR; i++)
     {
         uint32_t temp = ((((uint32_t)(C[i] & 0xFFF) << 10) + 2048) >> 12);
-        remainder = (C[i]%8==6);
-        out[i] = (temp - remainder) & 0x3FF;
+        uint32_t remainder = (((uint32_t)(C[i] & 0xFFF) << 10) + 2048) % 6144;
+        out[i] = (temp - (remainder == 0)) & 0x3FF;
     }
 }
 }

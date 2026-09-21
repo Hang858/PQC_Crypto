@@ -485,7 +485,7 @@ if (SCLOUDPLUS_L == 128) {
 		tmp[7] = (*(uint16_t *)(ptrin + 9) >> 5) & 0x7FF;
 		for (int j = 0; j < 8; j++)
 		{
-			if (tmp[j] < SCLOUDPLUS_N)
+			if (tmp[j] < SCLOUDPLUS_M)
 			{
 				*ptrout = tmp[j];
 				ptrout = ptrout + 1;
@@ -508,13 +508,13 @@ if (SCLOUDPLUS_L == 128) {
 		A[7] = (*(uint64_t *)(ptrin + 44) >> 5) & 0x7FFFFFFFFFFFF;
 		for (int j = 0; j < 8; j++)
 		{
-			if (A[j] < SCLOUDPLUS_M5)
+			if (A[j] < SCLOUDPLUS_N5)
 			{
-				*ptrout = A[j] % SCLOUDPLUS_M;
-				*(ptrout + 1) = A[j] / SCLOUDPLUS_M % SCLOUDPLUS_M;
-				*(ptrout + 2) = A[j] / SCLOUDPLUS_M2 % SCLOUDPLUS_M;
-				*(ptrout + 3) = A[j] / SCLOUDPLUS_M3 % SCLOUDPLUS_M;
-				*(ptrout + 4) = A[j] / SCLOUDPLUS_M4 % SCLOUDPLUS_M;
+				*ptrout = A[j] % SCLOUDPLUS_N;
+				*(ptrout + 1) = A[j] / SCLOUDPLUS_N % SCLOUDPLUS_N;
+				*(ptrout + 2) = A[j] / SCLOUDPLUS_N2 % SCLOUDPLUS_N;
+				*(ptrout + 3) = A[j] / SCLOUDPLUS_N3 % SCLOUDPLUS_N;
+				*(ptrout + 4) = A[j] / SCLOUDPLUS_N4 % SCLOUDPLUS_N;
 				ptrout = ptrout + 5;
 				*outlen += 5;
 			}
@@ -525,13 +525,13 @@ if (SCLOUDPLUS_L == 128) {
 	A[1] = (*(uint64_t *)(ptrin + 6) >> 3) & 0x7FFFFFFFFFFFF;
 	for (int j = 0; j < 2; j++)
 	{
-		if (A[j] < SCLOUDPLUS_M5)
+		if (A[j] < SCLOUDPLUS_N5)
 		{
-			*ptrout = A[j] % SCLOUDPLUS_M;
-			*(ptrout + 1) = A[j] / SCLOUDPLUS_M % SCLOUDPLUS_M;
-			*(ptrout + 2) = A[j] / SCLOUDPLUS_M2 % SCLOUDPLUS_M;
-			*(ptrout + 3) = A[j] / SCLOUDPLUS_M3 % SCLOUDPLUS_M;
-			*(ptrout + 4) = A[j] / SCLOUDPLUS_M4 % SCLOUDPLUS_M;
+			*ptrout = A[j] % SCLOUDPLUS_N;
+			*(ptrout + 1) = A[j] / SCLOUDPLUS_N % SCLOUDPLUS_N;
+			*(ptrout + 2) = A[j] / SCLOUDPLUS_N2 % SCLOUDPLUS_N;
+			*(ptrout + 3) = A[j] / SCLOUDPLUS_N3 % SCLOUDPLUS_N;
+			*(ptrout + 4) = A[j] / SCLOUDPLUS_N4 % SCLOUDPLUS_N;
 			ptrout = ptrout + 5;
 			*outlen += 5;
 		}

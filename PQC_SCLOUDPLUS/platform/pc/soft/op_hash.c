@@ -6,7 +6,37 @@
 #include "sha256.h"
 #include "sha3.h"
 
+/*
+ * Test mode for hash accelerators whose state argument is only an API
+ * placeholder.  Such accelerators keep the live SHA-3/SHAKE state inside the
+ * device, so passing a previously saved buffer cannot restore an old stream.
+ */
+#ifdef OP_HASH_OPAQUE_STATE_TEST
+static uint64_t g_opaque_sha3_state[OP_STATE_SIZE_SHA3 / sizeof(uint64_t)];
+
+static void *op_hash_live_state(uint8_t alg, void *state)
+{
+    switch (alg) {
+    case OP_ALG_SHAKE128:
+    case OP_ALG_SHAKE256:
+    case OP_ALG_SHA3_256:
+    case OP_ALG_SHA3_384:
+    case OP_ALG_SHA3_512:
+        return g_opaque_sha3_state;
+    default:
+        return state;
+    }
+}
+#else
+static void *op_hash_live_state(uint8_t alg, void *state)
+{
+    (void)alg;
+    return state;
+}
+#endif
+
 int OP_hash_init(uint8_t alg, void *s, int s_len) {
+    s = op_hash_live_state(alg, s);
     switch (alg)
     {
     case OP_ALG_SHA256:
@@ -38,6 +68,7 @@ int OP_hash_init(uint8_t alg, void *s, int s_len) {
 }
 
 int OP_hash_absorb(uint8_t alg, void *s, int s_len, const void *input, int input_len) {
+    s = op_hash_live_state(alg, s);
     (void)s_len;
     if (alg == OP_ALG_SHA256) {
         SHA256_CTX *state = (SHA256_CTX *)s;
@@ -62,6 +93,7 @@ int OP_hash_absorb(uint8_t alg, void *s, int s_len, const void *input, int input
 }
 
 int OP_hash_squeeze(uint8_t alg, void *s, int s_len, void *output, int output_len) {
+    s = op_hash_live_state(alg, s);
     (void)s_len;
     if (alg == OP_ALG_SHA256) {
         SHA256_CTX *state = (SHA256_CTX *)s;

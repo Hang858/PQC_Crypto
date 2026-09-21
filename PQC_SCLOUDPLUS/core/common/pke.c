@@ -91,7 +91,8 @@ typedef struct {
 } scloudplus_eta_stream_t;
 
 static void
-scloudplus_eta_stream_init(scloudplus_eta_stream_t *stream, uint8_t *seed, int eta)
+scloudplus_eta_stream_init(scloudplus_eta_stream_t *stream,
+						   const uint8_t *seed, int eta)
 {
 	shake256_absorb_once(&stream->state, seed, 32);
 	stream->block_pos = SHAKE256_RATE;
@@ -205,6 +206,32 @@ scloudplus_c1_put_compressed(uint8_t *out, size_t idx, uint16_t v)
 		out[inlen + (idx >> 2)] =
 			(uint8_t)(out[inlen + (idx >> 2)] | ((v >> 8) << (6 - 2 * (idx & 3u))));
 	}
+}
+
+static size_t
+scloudplus_c1_error_pos(size_t idx)
+{
+	if (SCLOUDPLUS_L == 192) {
+		size_t row = idx / SCLOUDPLUS_N;
+		size_t col = idx % SCLOUDPLUS_N;
+		size_t packed_row_len = (size_t)SCLOUDPLUS_N * 3 / 2;
+
+		/* The last N bytes of each not-yet-packed row are safe scratch. */
+		return row * packed_row_len + packed_row_len - SCLOUDPLUS_N + col;
+	}
+	return idx;
+}
+
+static void
+scloudplus_c1_error_put(uint8_t *out, size_t idx, uint16_t value)
+{
+	out[scloudplus_c1_error_pos(idx)] = (uint8_t)(value + SCLOUDPLUS_ETA2);
+}
+
+static uint16_t
+scloudplus_c1_error_get(const uint8_t *out, size_t idx)
+{
+	return (uint16_t)(out[scloudplus_c1_error_pos(idx)] - SCLOUDPLUS_ETA2);
 }
 
 static uint16_t
@@ -433,7 +460,23 @@ int scloudplus_pkeenc(uint8_t *pk, uint8_t *m, uint8_t *r, uint8_t *ctx)
 	scloudplus_eta_stream_init(&eta_stream, r2, SCLOUDPLUS_ETA2);
 	scloudplus_msgencode(m, mu0);
 	memset(ctx, 0, SCLOUDPLUS_CTX);
-	memset(C2, 0, (size_t)SCLOUDPLUS_MBAR * SCLOUDPLUS_NBAR * sizeof(uint16_t));
+
+	/*
+	 * Consume the whole ETA stream before samplephi starts another SHAKE
+	 * operation.  C2 already has dedicated storage.  C1 errors temporarily use
+	 * bytes of the not-yet-packed ciphertext, avoiding another allocation.
+	 */
+	for (int row = 0; row < SCLOUDPLUS_MBAR; row++) {
+		for (int col = 0; col < SCLOUDPLUS_N; col++) {
+			size_t idx = (size_t)row * SCLOUDPLUS_N + col;
+
+			scloudplus_c1_error_put(ctx, idx,
+								scloudplus_eta_stream_next(&eta_stream));
+		}
+	}
+	for (int i = 0; i < SCLOUDPLUS_MBAR * SCLOUDPLUS_NBAR; i++) {
+		C2[i] = scloudplus_eta_stream_next(&eta_stream);
+	}
 	AES128_load_schedule(seedA, aes_key_schedule);
 	for (int row = 0; row < SCLOUDPLUS_MBAR; row++) {
 		if (scloudplus_samplephi_row(r1, row, S_row) != 0) {
@@ -447,7 +490,9 @@ int scloudplus_pkeenc(uint8_t *pk, uint8_t *m, uint8_t *r, uint8_t *ctx)
 			memset(C_tile, 0, sizeof C_tile);
 			for (int c = 0; c < 8; c++) {
 				if (q + c < SCLOUDPLUS_N) {
-					C_tile[0][c] = scloudplus_eta_stream_next(&eta_stream);
+					size_t idx = (size_t)row * SCLOUDPLUS_N + q + c;
+
+					C_tile[0][c] = scloudplus_c1_error_get(ctx, idx);
 				}
 			}
 			for (int i = 0; i < SCLOUDPLUS_M; i += 8) {
@@ -486,10 +531,6 @@ int scloudplus_pkeenc(uint8_t *pk, uint8_t *m, uint8_t *r, uint8_t *ctx)
 			free(mu0);
 			free(C2);
 			return -1;
-		}
-		for (int c = 0; c < SCLOUDPLUS_NBAR; c++) {
-			C2[row * SCLOUDPLUS_NBAR + c] =
-				scloudplus_eta_stream_next(&eta_stream);
 		}
 		for (int i = 0; i < SCLOUDPLUS_M; i += 8) {
 			memset(x, 0, sizeof x);
