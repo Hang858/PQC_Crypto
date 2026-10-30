@@ -1,0 +1,2837 @@
+{
+  "scope": "New OP NTT software backend and adapter, static compiler inspection only",
+  "records": [
+    {
+      "source": "PQC_BIT/platform/pc/soft/op_ntt.c",
+      "architecture": "arm64",
+      "optimization": "O2",
+      "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+      "command": [
+        "clang",
+        "-arch",
+        "arm64",
+        "-O2",
+        "-std=c11",
+        "-IPQC_BIT/include",
+        "-IPQC_BIT/core/common",
+        "-IPQC_BIT/platform/pc",
+        "-S",
+        "PQC_BIT/platform/pc/soft/op_ntt.c",
+        "-o",
+        "/private/tmp/pqc-bit-ntt/ct/op_ntt-arm64-O2.s"
+      ],
+      "report": {
+        "architecture": "arm64",
+        "compiler": "unknown",
+        "optimization": "unknown",
+        "source_file": "/private/tmp/pqc-bit-ntt/ct/op_ntt-arm64-O2.s",
+        "total_functions": 17,
+        "total_instructions": 556,
+        "error_count": 0,
+        "warning_count": 33,
+        "passed": true,
+        "violations": [
+          {
+            "function": "<unknown>",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbnz\tw2, LBB1_20",
+            "mnemonic": "CBNZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "<unknown>",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx1, LBB1_20",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "<unknown>",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx0, LBB1_20",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh1",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx9, LBB1_20",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh1",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.hi\tLBB1_7",
+            "mnemonic": "B.HI",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh1",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB1_6",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ge\tLBB1_17",
+            "mnemonic": "B.GE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.eq\tLBB1_9",
+            "mnemonic": "B.EQ",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB1_14",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.eq\tLBB1_11",
+            "mnemonic": "B.EQ",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB1_16",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_17",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB1_18",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_20",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB2_20",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_20",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx1, LBB2_20",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_20",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx0, LBB2_20",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx9, LBB2_20",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.hi\tLBB2_7",
+            "mnemonic": "B.HI",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB2_6",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ls\tLBB2_17",
+            "mnemonic": "B.LS",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.eq\tLBB2_9",
+            "mnemonic": "B.EQ",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB2_14",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.eq\tLBB2_11",
+            "mnemonic": "B.EQ",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB2_16",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_17",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB2_18",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_20",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbnz\tw5, LBB3_14",
+            "mnemonic": "CBNZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_20",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB3_14",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_20",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB3_14",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_20",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx2, LBB3_14",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_20",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx1, LBB3_14",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_20",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx0, LBB3_14",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh5",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx9, LBB3_14",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh5",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB3_10",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB3_11",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB3_12",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          }
+        ]
+      }
+    },
+    {
+      "source": "PQC_BIT/core/common/ntt.c",
+      "architecture": "arm64",
+      "optimization": "O2",
+      "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+      "command": [
+        "clang",
+        "-arch",
+        "arm64",
+        "-O2",
+        "-std=c11",
+        "-IPQC_BIT/include",
+        "-IPQC_BIT/core/common",
+        "-IPQC_BIT/platform/pc",
+        "-S",
+        "PQC_BIT/core/common/ntt.c",
+        "-o",
+        "/private/tmp/pqc-bit-ntt/ct/ntt-arm64-O2.s"
+      ],
+      "report": {
+        "architecture": "arm64",
+        "compiler": "unknown",
+        "optimization": "unknown",
+        "source_file": "/private/tmp/pqc-bit-ntt/ct/ntt-arm64-O2.s",
+        "total_functions": 21,
+        "total_instructions": 1171,
+        "error_count": 0,
+        "warning_count": 19,
+        "passed": true,
+        "violations": [
+          {
+            "function": "Lloh1",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tw0, LBB1_2",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tw0, LBB2_2",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB3_1",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tw0, LBB3_4",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB3_5",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB4_1",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB3_5",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx0, LBB6_4",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tw0, LBB6_6",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_6",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.hi\tLBB6_9",
+            "mnemonic": "B.HI",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_6",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tw21, LBB6_16",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_6",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbnz\tw0, LBB6_2",
+            "mnemonic": "CBNZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_9",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.eq\tLBB6_17",
+            "mnemonic": "B.EQ",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_9",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB6_21",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_9",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB6_12",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_9",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbnz\tw0, LBB6_2",
+            "mnemonic": "CBNZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_9",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB6_15",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_16",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbnz\tw0, LBB6_2",
+            "mnemonic": "CBNZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_17",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB6_18",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_17",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbnz\tw0, LBB6_2",
+            "mnemonic": "CBNZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_21",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB6_22",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          }
+        ]
+      }
+    },
+    {
+      "source": "PQC_BIT/platform/pc/soft/op_ntt.c",
+      "architecture": "arm64",
+      "optimization": "O3",
+      "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+      "command": [
+        "clang",
+        "-arch",
+        "arm64",
+        "-O3",
+        "-std=c11",
+        "-IPQC_BIT/include",
+        "-IPQC_BIT/core/common",
+        "-IPQC_BIT/platform/pc",
+        "-S",
+        "PQC_BIT/platform/pc/soft/op_ntt.c",
+        "-o",
+        "/private/tmp/pqc-bit-ntt/ct/op_ntt-arm64-O3.s"
+      ],
+      "report": {
+        "architecture": "arm64",
+        "compiler": "unknown",
+        "optimization": "unknown",
+        "source_file": "/private/tmp/pqc-bit-ntt/ct/op_ntt-arm64-O3.s",
+        "total_functions": 24,
+        "total_instructions": 2213,
+        "error_count": 0,
+        "warning_count": 41,
+        "passed": true,
+        "violations": [
+          {
+            "function": "<unknown>",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbnz\tw2, LBB1_39",
+            "mnemonic": "CBNZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "<unknown>",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx1, LBB1_39",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "<unknown>",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx0, LBB1_39",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh1",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx9, LBB1_39",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh1",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.hi\tLBB1_7",
+            "mnemonic": "B.HI",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh1",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB1_6",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB1_9",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB1_11",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB1_15",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_16",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB1_17",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_18",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB1_21",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_22",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB1_23",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_24",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB1_27",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_28",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB1_29",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_30",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB1_33",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_34",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB1_35",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_36",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB1_37",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_39",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB2_25",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_39",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx1, LBB2_25",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_39",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx0, LBB2_25",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx9, LBB2_25",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.hi\tLBB2_7",
+            "mnemonic": "B.HI",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB2_6",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ls\tLBB2_22",
+            "mnemonic": "B.LS",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.eq\tLBB2_9",
+            "mnemonic": "B.EQ",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.eq\tLBB2_12",
+            "mnemonic": "B.EQ",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.eq\tLBB2_12",
+            "mnemonic": "B.EQ",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.eq\tLBB2_9",
+            "mnemonic": "B.EQ",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB2_19",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.eq\tLBB2_17",
+            "mnemonic": "B.EQ",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB2_21",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_22",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB2_23",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_25",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbnz\tw5, LBB3_14",
+            "mnemonic": "CBNZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_25",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB3_14",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_25",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB3_14",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_25",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx2, LBB3_14",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_25",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx1, LBB3_14",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_25",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx0, LBB3_14",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh5",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx9, LBB3_14",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh5",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB3_10",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB3_11",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB3_12",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          }
+        ]
+      }
+    },
+    {
+      "source": "PQC_BIT/core/common/ntt.c",
+      "architecture": "arm64",
+      "optimization": "O3",
+      "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+      "command": [
+        "clang",
+        "-arch",
+        "arm64",
+        "-O3",
+        "-std=c11",
+        "-IPQC_BIT/include",
+        "-IPQC_BIT/core/common",
+        "-IPQC_BIT/platform/pc",
+        "-S",
+        "PQC_BIT/core/common/ntt.c",
+        "-o",
+        "/private/tmp/pqc-bit-ntt/ct/ntt-arm64-O3.s"
+      ],
+      "report": {
+        "architecture": "arm64",
+        "compiler": "unknown",
+        "optimization": "unknown",
+        "source_file": "/private/tmp/pqc-bit-ntt/ct/ntt-arm64-O3.s",
+        "total_functions": 35,
+        "total_instructions": 2804,
+        "error_count": 0,
+        "warning_count": 24,
+        "passed": true,
+        "violations": [
+          {
+            "function": "Lloh1",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tw0, LBB1_2",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tw0, LBB2_2",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tw0, LBB3_2",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB3_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB4_1",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB3_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx0, LBB5_5",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbnz\tw0, LBB5_3",
+            "mnemonic": "CBNZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tw0, LBB5_6",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB5_6",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx0, LBB6_4",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh5",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tw0, LBB6_6",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_6",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.hi\tLBB6_9",
+            "mnemonic": "B.HI",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_6",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tw23, LBB6_13",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_6",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbnz\tw0, LBB6_2",
+            "mnemonic": "CBNZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_9",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.eq\tLBB6_14",
+            "mnemonic": "B.EQ",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_9",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB6_16",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_9",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbnz\tw0, LBB6_2",
+            "mnemonic": "CBNZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_13",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbnz\tw0, LBB6_2",
+            "mnemonic": "CBNZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_14",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbnz\tw0, LBB6_2",
+            "mnemonic": "CBNZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_16",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB6_17",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_16",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx0, LBB7_5",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh7",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbnz\tw0, LBB7_3",
+            "mnemonic": "CBNZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh7",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tw0, LBB7_6",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB7_6",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tx0, LBB10_3",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "Lloh9",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "cbz\tw0, LBB10_4",
+            "mnemonic": "CBZ",
+            "reason": "compare-and-branch may leak timing information if value depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB10_4",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "b.ne\tLBB10_5",
+            "mnemonic": "B.NE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          }
+        ]
+      }
+    },
+    {
+      "source": "PQC_BIT/platform/pc/soft/op_ntt.c",
+      "architecture": "x86_64",
+      "optimization": "O2",
+      "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+      "command": [
+        "clang",
+        "-arch",
+        "x86_64",
+        "-O2",
+        "-std=c11",
+        "-IPQC_BIT/include",
+        "-IPQC_BIT/core/common",
+        "-IPQC_BIT/platform/pc",
+        "-S",
+        "PQC_BIT/platform/pc/soft/op_ntt.c",
+        "-o",
+        "/private/tmp/pqc-bit-ntt/ct/op_ntt-x86_64-O2.s"
+      ],
+      "report": {
+        "architecture": "x86_64",
+        "compiler": "unknown",
+        "optimization": "unknown",
+        "source_file": "/private/tmp/pqc-bit-ntt/ct/op_ntt-x86_64-O2.s",
+        "total_functions": 22,
+        "total_instructions": 524,
+        "error_count": 0,
+        "warning_count": 38,
+        "passed": true,
+        "violations": [
+          {
+            "function": "LCPI1_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_20",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI1_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB1_20",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI1_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB1_20",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI1_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB1_19",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI1_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jae\tLBB1_5",
+            "mnemonic": "JAE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI1_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_8",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_5",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_6",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_9",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jge\tLBB1_17",
+            "mnemonic": "JGE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_9",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB1_16",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_9",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jb\tLBB1_21",
+            "mnemonic": "JB",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_9",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_13",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_9",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB1_15",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_9",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_21",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_17",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_18",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI2_3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB2_20",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI2_3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB2_20",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI2_3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB2_20",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI2_3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB2_19",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI2_3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jae\tLBB2_5",
+            "mnemonic": "JAE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI2_3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB2_8",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_5",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB2_6",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_9",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jbe\tLBB2_17",
+            "mnemonic": "JBE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_9",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB2_16",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_9",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jb\tLBB2_21",
+            "mnemonic": "JB",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_9",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB2_13",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_9",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB2_15",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_9",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB2_21",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_17",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB2_18",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB3_13",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB3_13",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB3_13",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB3_13",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB3_13",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB3_13",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB3_13",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB3_8",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB3_12",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB3_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB3_9",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          }
+        ]
+      }
+    },
+    {
+      "source": "PQC_BIT/core/common/ntt.c",
+      "architecture": "x86_64",
+      "optimization": "O2",
+      "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+      "command": [
+        "clang",
+        "-arch",
+        "x86_64",
+        "-O2",
+        "-std=c11",
+        "-IPQC_BIT/include",
+        "-IPQC_BIT/core/common",
+        "-IPQC_BIT/platform/pc",
+        "-S",
+        "PQC_BIT/core/common/ntt.c",
+        "-o",
+        "/private/tmp/pqc-bit-ntt/ct/ntt-x86_64-O2.s"
+      ],
+      "report": {
+        "architecture": "x86_64",
+        "compiler": "unknown",
+        "optimization": "unknown",
+        "source_file": "/private/tmp/pqc-bit-ntt/ct/ntt-x86_64-O2.s",
+        "total_functions": 27,
+        "total_instructions": 513,
+        "error_count": 0,
+        "warning_count": 26,
+        "passed": true,
+        "violations": [
+          {
+            "function": "LCPI1_0",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_1",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI1_0",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_5",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI1_0",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_4",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI2_0",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB2_1",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI2_0",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB2_5",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI2_0",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB2_4",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_0",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB3_1",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_0",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB3_5",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_0",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB3_4",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI4_4",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB4_1",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI6_5",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB6_1",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI6_5",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB6_4",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_4",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "ja\tLBB6_13",
+            "mnemonic": "JA",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_4",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB6_6",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_4",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB6_9",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_13",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB6_22",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_13",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB6_15",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_13",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB6_18",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_13",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB6_27",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_13",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB6_21",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_10",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB6_27",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_10",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB6_12",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_22",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB6_23",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_22",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB6_27",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_22",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB6_26",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_15",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB6_16",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          }
+        ]
+      }
+    },
+    {
+      "source": "PQC_BIT/platform/pc/soft/op_ntt.c",
+      "architecture": "x86_64",
+      "optimization": "O3",
+      "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+      "command": [
+        "clang",
+        "-arch",
+        "x86_64",
+        "-O3",
+        "-std=c11",
+        "-IPQC_BIT/include",
+        "-IPQC_BIT/core/common",
+        "-IPQC_BIT/platform/pc",
+        "-S",
+        "PQC_BIT/platform/pc/soft/op_ntt.c",
+        "-o",
+        "/private/tmp/pqc-bit-ntt/ct/op_ntt-x86_64-O3.s"
+      ],
+      "report": {
+        "architecture": "x86_64",
+        "compiler": "unknown",
+        "optimization": "unknown",
+        "source_file": "/private/tmp/pqc-bit-ntt/ct/op_ntt-x86_64-O3.s",
+        "total_functions": 27,
+        "total_instructions": 1889,
+        "error_count": 0,
+        "warning_count": 47,
+        "passed": true,
+        "violations": [
+          {
+            "function": "LCPI1_3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_31",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI1_3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB1_31",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI1_3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB1_31",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI1_3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB1_31",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI1_3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "ja\tLBB1_32",
+            "mnemonic": "JA",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI1_3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_6",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_33",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_34",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_33",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_7",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_33",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_9",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_33",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_11",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_33",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_13",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_33",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB1_15",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_33",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_18",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_15",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_16",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_19",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB1_20",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_19",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_23",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_20",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_21",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_24",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB1_25",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_24",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_28",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_25",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_26",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB1_29",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB1_30",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI2_3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB2_23",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI2_3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB2_23",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI2_3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB2_23",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI2_3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB2_22",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI2_3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "ja\tLBB2_25",
+            "mnemonic": "JA",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI2_3",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB2_6",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_7",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jbe\tLBB2_20",
+            "mnemonic": "JBE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_7",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jae\tLBB2_9",
+            "mnemonic": "JAE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_7",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB2_19",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_7",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB2_18",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_7",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB2_18",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_7",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB2_19",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_7",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB2_11",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_7",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB2_13",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_7",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB2_24",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB2_20",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB2_21",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB3_13",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB3_13",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB3_13",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB3_13",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB3_13",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB3_13",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB3_13",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB3_8",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_2",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB3_12",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB3_8",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB3_9",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          }
+        ]
+      }
+    },
+    {
+      "source": "PQC_BIT/core/common/ntt.c",
+      "architecture": "x86_64",
+      "optimization": "O3",
+      "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+      "command": [
+        "clang",
+        "-arch",
+        "x86_64",
+        "-O3",
+        "-std=c11",
+        "-IPQC_BIT/include",
+        "-IPQC_BIT/core/common",
+        "-IPQC_BIT/platform/pc",
+        "-S",
+        "PQC_BIT/core/common/ntt.c",
+        "-o",
+        "/private/tmp/pqc-bit-ntt/ct/ntt-x86_64-O3.s"
+      ],
+      "report": {
+        "architecture": "x86_64",
+        "compiler": "unknown",
+        "optimization": "unknown",
+        "source_file": "/private/tmp/pqc-bit-ntt/ct/ntt-x86_64-O3.s",
+        "total_functions": 43,
+        "total_instructions": 2351,
+        "error_count": 0,
+        "warning_count": 28,
+        "passed": true,
+        "violations": [
+          {
+            "function": "LCPI1_0",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB1_1",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI2_0",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB2_1",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_0",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB3_1",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI3_0",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB3_3",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI4_4",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB4_1",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI5_0",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB5_1",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI5_0",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB5_5",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI5_0",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB5_5",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI6_5",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB6_1",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI6_5",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB6_4",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_4",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "ja\tLBB6_10",
+            "mnemonic": "JA",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_4",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB6_7",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_4",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB6_22",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_10",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB6_19",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_10",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB6_12",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_10",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB6_15",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_10",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB6_22",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_10",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB6_18",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_7",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB6_22",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_19",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB6_20",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_19",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB6_22",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LBB6_12",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB6_13",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI7_0",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB7_1",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI7_0",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB7_5",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI7_0",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB7_5",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI10_4",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "je\tLBB10_1",
+            "mnemonic": "JE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI10_4",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB10_5",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          },
+          {
+            "function": "LCPI10_4",
+            "file": "",
+            "line": null,
+            "address": "",
+            "instruction": "jne\tLBB10_4",
+            "mnemonic": "JNE",
+            "reason": "conditional branch may leak timing information if condition depends on secret data",
+            "severity": "warning"
+          }
+        ]
+      }
+    }
+  ],
+  "triage": [
+    "OP_ntt256_init branches validate public pointers, parameter sizes, q, inverse constants and k.",
+    "OP_ntt256/OP_intt256 branches validate public ready-state/pointers/index, choose vectorized copies by public alias/alignment ranges, and iterate public 256-length/eight-layer butterfly loops.",
+    "OP_cwm branches validate public length/q/k/pointers/ready-state and choose vectorized memory paths by public address ranges; coefficient loops have fixed public bounds.",
+    "Adapter branches handle public operation kind, allocator/OP status and fixed loop bounds; coefficients are reduced with multiply-shift/masks, without secret division or coefficient-indexed table access.",
+    "Raw tool warnings are retained; local assembly labels may be attributed as function names by the analyzer. These warning groups are triaged from source plus corresponding assembly, not treated as vulnerabilities or suppressed.",
+    "No complete signing constant-time/security or hardware timing claim is established; only these compiler/architecture/optimization combinations were inspected."
+  ]
+}

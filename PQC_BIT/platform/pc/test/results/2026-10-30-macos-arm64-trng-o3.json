@@ -1,0 +1,186 @@
+{
+  "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+  "flags": [
+    "-O3",
+    "-std=c11",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic"
+  ],
+  "rounds": 9,
+  "random_sources": {
+    "baseline": "original SM3 DRNG",
+    "adapted": "production OP_trng (system entropy)",
+    "byte_comparison": "separate TEST ONLY OP_trng backed by original stream"
+  },
+  "cross_validation": {
+    "signatures_per_direction": 512,
+    "cross_verify_both_directions": true,
+    "cross_sign_imported_secret_keys_both_directions": true
+  },
+  "keys_per_round": 32,
+  "signatures_per_round": 512,
+  "vectors_sha256": "6850266a46f01d92942844c9edaafe45f83f04bec762cf8aa232561162b2968e",
+  "samples": {
+    "baseline": [
+      {
+        "keygen_ns": 42062.5,
+        "sign_ns": 118931.641,
+        "verify_ns": 24126.953
+      },
+      {
+        "keygen_ns": 42156.25,
+        "sign_ns": 122914.062,
+        "verify_ns": 25064.453
+      },
+      {
+        "keygen_ns": 42218.75,
+        "sign_ns": 119548.828,
+        "verify_ns": 24246.094
+      },
+      {
+        "keygen_ns": 42031.25,
+        "sign_ns": 119705.078,
+        "verify_ns": 24267.578
+      },
+      {
+        "keygen_ns": 42906.25,
+        "sign_ns": 124291.016,
+        "verify_ns": 25107.422
+      },
+      {
+        "keygen_ns": 42000.0,
+        "sign_ns": 119056.641,
+        "verify_ns": 24142.578
+      },
+      {
+        "keygen_ns": 41875.0,
+        "sign_ns": 119208.984,
+        "verify_ns": 24099.609
+      },
+      {
+        "keygen_ns": 42531.25,
+        "sign_ns": 119113.281,
+        "verify_ns": 24156.25
+      },
+      {
+        "keygen_ns": 42000.0,
+        "sign_ns": 119265.625,
+        "verify_ns": 24164.062
+      }
+    ],
+    "adapted": [
+      {
+        "keygen_ns": 32406.25,
+        "sign_ns": 120433.594,
+        "verify_ns": 24275.391
+      },
+      {
+        "keygen_ns": 38218.75,
+        "sign_ns": 117691.406,
+        "verify_ns": 24779.297
+      },
+      {
+        "keygen_ns": 40437.5,
+        "sign_ns": 124576.172,
+        "verify_ns": 24343.75
+      },
+      {
+        "keygen_ns": 41843.75,
+        "sign_ns": 119550.781,
+        "verify_ns": 24271.484
+      },
+      {
+        "keygen_ns": 39781.25,
+        "sign_ns": 125058.594,
+        "verify_ns": 24523.438
+      },
+      {
+        "keygen_ns": 45125.0,
+        "sign_ns": 118906.25,
+        "verify_ns": 24416.016
+      },
+      {
+        "keygen_ns": 40812.5,
+        "sign_ns": 126023.438,
+        "verify_ns": 25113.281
+      },
+      {
+        "keygen_ns": 38093.75,
+        "sign_ns": 122058.594,
+        "verify_ns": 24335.938
+      },
+      {
+        "keygen_ns": 38156.25,
+        "sign_ns": 121919.922,
+        "verify_ns": 24384.766
+      }
+    ]
+  },
+  "summary": {
+    "keygen_ns": {
+      "baseline_median": 42062.5,
+      "adapted_median": 39781.25,
+      "change_percent": -5.423476968796437,
+      "baseline_range": [
+        41875.0,
+        42906.25
+      ],
+      "adapted_range": [
+        32406.25,
+        45125.0
+      ]
+    },
+    "sign_ns": {
+      "baseline_median": 119265.625,
+      "adapted_median": 121919.922,
+      "change_percent": 2.2255339709157607,
+      "baseline_range": [
+        118931.641,
+        124291.016
+      ],
+      "adapted_range": [
+        117691.406,
+        126023.438
+      ]
+    },
+    "verify_ns": {
+      "baseline_median": 24164.062,
+      "adapted_median": 24384.766,
+      "change_percent": 0.9133563719543325,
+      "baseline_range": [
+        24099.609,
+        25107.422
+      ],
+      "adapted_range": [
+        24271.484,
+        25113.281
+      ]
+    }
+  },
+  "environment": {
+    "system": "Darwin",
+    "machine": "arm64",
+    "frequency_control": "not pinned",
+    "measurement": "serial alternating order; production uses system OP_trng, baseline uses original DRNG"
+  },
+  "memory": {
+    "keygen_heap": 14920,
+    "sign_heap": 27872,
+    "verify_heap": 18682,
+    "fixed_io": 4400,
+    "algorithm_writable_global_state": 0,
+    "reserved_stack": 3072,
+    "allocator_and_alignment_reserve": 128,
+    "libc_reserve": 256,
+    "sign_payload_budget": 35728,
+    "sign_host_rounded_budget": 36528
+  },
+  "stack": {
+    "bit_sig_keygen": 2144,
+    "bit_sig_sign": 2800,
+    "bit_sig_verify": 1968,
+    "bit_random_init": 128
+  },
+  "status": "historical: direct OP random before OP NTT adaptation"
+}

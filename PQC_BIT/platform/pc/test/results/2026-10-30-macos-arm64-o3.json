@@ -1,0 +1,176 @@
+{
+  "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+  "flags": [
+    "-O3",
+    "-std=c11",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic"
+  ],
+  "rounds": 9,
+  "keys_per_round": 32,
+  "signatures_per_round": 512,
+  "vectors_sha256": "6850266a46f01d92942844c9edaafe45f83f04bec762cf8aa232561162b2968e",
+  "samples": {
+    "baseline": [
+      {
+        "keygen_ns": 42125.0,
+        "sign_ns": 118062.5,
+        "verify_ns": 23984.375
+      },
+      {
+        "keygen_ns": 41656.25,
+        "sign_ns": 118183.594,
+        "verify_ns": 23984.375
+      },
+      {
+        "keygen_ns": 42062.5,
+        "sign_ns": 118369.141,
+        "verify_ns": 24126.953
+      },
+      {
+        "keygen_ns": 41812.5,
+        "sign_ns": 118507.812,
+        "verify_ns": 24013.672
+      },
+      {
+        "keygen_ns": 41718.75,
+        "sign_ns": 118470.703,
+        "verify_ns": 24107.422
+      },
+      {
+        "keygen_ns": 41843.75,
+        "sign_ns": 118560.547,
+        "verify_ns": 24119.141
+      },
+      {
+        "keygen_ns": 42437.5,
+        "sign_ns": 118675.781,
+        "verify_ns": 24113.281
+      },
+      {
+        "keygen_ns": 41937.5,
+        "sign_ns": 118527.344,
+        "verify_ns": 24048.828
+      },
+      {
+        "keygen_ns": 42187.5,
+        "sign_ns": 118578.125,
+        "verify_ns": 24171.875
+      }
+    ],
+    "adapted": [
+      {
+        "keygen_ns": 42312.5,
+        "sign_ns": 118054.688,
+        "verify_ns": 24138.672
+      },
+      {
+        "keygen_ns": 41968.75,
+        "sign_ns": 118220.703,
+        "verify_ns": 24216.797
+      },
+      {
+        "keygen_ns": 41875.0,
+        "sign_ns": 118398.438,
+        "verify_ns": 24201.172
+      },
+      {
+        "keygen_ns": 42093.75,
+        "sign_ns": 118187.5,
+        "verify_ns": 24171.875
+      },
+      {
+        "keygen_ns": 42250.0,
+        "sign_ns": 118632.812,
+        "verify_ns": 24308.594
+      },
+      {
+        "keygen_ns": 41812.5,
+        "sign_ns": 118443.359,
+        "verify_ns": 24148.438
+      },
+      {
+        "keygen_ns": 42218.75,
+        "sign_ns": 118566.406,
+        "verify_ns": 24230.469
+      },
+      {
+        "keygen_ns": 42000.0,
+        "sign_ns": 118470.703,
+        "verify_ns": 24269.531
+      },
+      {
+        "keygen_ns": 42187.5,
+        "sign_ns": 118783.203,
+        "verify_ns": 24273.438
+      }
+    ]
+  },
+  "summary": {
+    "keygen_ns": {
+      "baseline_median": 41937.5,
+      "adapted_median": 42093.75,
+      "change_percent": 0.37257824143070994,
+      "baseline_range": [
+        41656.25,
+        42437.5
+      ],
+      "adapted_range": [
+        41812.5,
+        42312.5
+      ]
+    },
+    "sign_ns": {
+      "baseline_median": 118507.812,
+      "adapted_median": 118443.359,
+      "change_percent": -0.05438713187955191,
+      "baseline_range": [
+        118062.5,
+        118675.781
+      ],
+      "adapted_range": [
+        118054.688,
+        118783.203
+      ]
+    },
+    "verify_ns": {
+      "baseline_median": 24107.422,
+      "adapted_median": 24216.797,
+      "change_percent": 0.45369845021172583,
+      "baseline_range": [
+        23984.375,
+        24171.875
+      ],
+      "adapted_range": [
+        24138.672,
+        24308.594
+      ]
+    }
+  },
+  "environment": {
+    "system": "Darwin",
+    "machine": "arm64",
+    "frequency_control": "not pinned",
+    "measurement": "serial, alternating order, uninstrumented O3"
+  },
+  "memory": {
+    "keygen_heap": 14920,
+    "sign_heap": 27872,
+    "verify_heap": 18682,
+    "fixed_io": 4400,
+    "drng_and_flag_budget": 169,
+    "reserved_stack": 3072,
+    "allocator_and_alignment_reserve": 128,
+    "libc_reserve": 256,
+    "sign_payload_budget": 35897,
+    "sign_host_rounded_budget": 36697
+  },
+  "stack": {
+    "bit_sig_keygen": 2144,
+    "bit_sig_sign": 2800,
+    "bit_sig_verify": 1968,
+    "bit_random_init": 1280
+  },
+  "status": "historical: before direct OP_trng replacement; production previously used SM3 DRNG"
+}

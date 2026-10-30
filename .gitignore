@@ -28,3 +28,6 @@ standard/
 
 # 排除 test 目录下本地生成的资料和构建输出
 test/FRODOKEM/PQC_FRODOKEM/doc/
+
+# BiT 原始发布目录，仅保留本地对照
+/local-reference/

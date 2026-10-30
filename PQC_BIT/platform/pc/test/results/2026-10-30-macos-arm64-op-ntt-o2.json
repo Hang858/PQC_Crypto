@@ -1,0 +1,265 @@
+{
+  "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+  "flags": [
+    "-O2",
+    "-std=c11",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic"
+  ],
+  "rounds": 9,
+  "random_sources": {
+    "baseline": "original SM3 DRNG",
+    "adapted": "production OP_trng (system entropy)",
+    "byte_comparison": "separate TEST ONLY OP_trng backed by original stream"
+  },
+  "cross_validation": {
+    "signatures_per_direction": 512,
+    "cross_verify_both_directions": true,
+    "cross_sign_imported_secret_keys_both_directions": true
+  },
+  "keys_per_round": 32,
+  "signatures_per_round": 512,
+  "vectors_sha256": "6850266a46f01d92942844c9edaafe45f83f04bec762cf8aa232561162b2968e",
+  "samples": {
+    "baseline": [
+      {
+        "keygen_ns": 43125.0,
+        "sign_ns": 121294.922,
+        "verify_ns": 25626.953
+      },
+      {
+        "keygen_ns": 43093.75,
+        "sign_ns": 120947.266,
+        "verify_ns": 25568.359
+      },
+      {
+        "keygen_ns": 43500.0,
+        "sign_ns": 121250.0,
+        "verify_ns": 25597.656
+      },
+      {
+        "keygen_ns": 43406.25,
+        "sign_ns": 121341.797,
+        "verify_ns": 25595.703
+      },
+      {
+        "keygen_ns": 43218.75,
+        "sign_ns": 121390.625,
+        "verify_ns": 25652.344
+      },
+      {
+        "keygen_ns": 43093.75,
+        "sign_ns": 121060.547,
+        "verify_ns": 25533.203
+      },
+      {
+        "keygen_ns": 43250.0,
+        "sign_ns": 121435.547,
+        "verify_ns": 25613.281
+      },
+      {
+        "keygen_ns": 43281.25,
+        "sign_ns": 121376.953,
+        "verify_ns": 25628.906
+      },
+      {
+        "keygen_ns": 43218.75,
+        "sign_ns": 121326.172,
+        "verify_ns": 25587.891
+      }
+    ],
+    "adapted": [
+      {
+        "keygen_ns": 38125.0,
+        "sign_ns": 117449.219,
+        "verify_ns": 21669.922
+      },
+      {
+        "keygen_ns": 38437.5,
+        "sign_ns": 115501.953,
+        "verify_ns": 21519.531
+      },
+      {
+        "keygen_ns": 37656.25,
+        "sign_ns": 118048.828,
+        "verify_ns": 21482.422
+      },
+      {
+        "keygen_ns": 36281.25,
+        "sign_ns": 118066.406,
+        "verify_ns": 21439.453
+      },
+      {
+        "keygen_ns": 35250.0,
+        "sign_ns": 113414.062,
+        "verify_ns": 21365.234
+      },
+      {
+        "keygen_ns": 37156.25,
+        "sign_ns": 116625.0,
+        "verify_ns": 21464.844
+      },
+      {
+        "keygen_ns": 37843.75,
+        "sign_ns": 114439.453,
+        "verify_ns": 21410.156
+      },
+      {
+        "keygen_ns": 40718.75,
+        "sign_ns": 120126.953,
+        "verify_ns": 21427.734
+      },
+      {
+        "keygen_ns": 39500.0,
+        "sign_ns": 113681.641,
+        "verify_ns": 21449.219
+      }
+    ]
+  },
+  "summary": {
+    "keygen_ns": {
+      "baseline_median": 43218.75,
+      "adapted_median": 37843.75,
+      "change_percent": -12.43673174258858,
+      "baseline_range": [
+        43093.75,
+        43500.0
+      ],
+      "adapted_range": [
+        35250.0,
+        40718.75
+      ]
+    },
+    "sign_ns": {
+      "baseline_median": 121326.172,
+      "adapted_median": 116625.0,
+      "change_percent": -3.8748210072926392,
+      "baseline_range": [
+        120947.266,
+        121435.547
+      ],
+      "adapted_range": [
+        113414.062,
+        120126.953
+      ]
+    },
+    "verify_ns": {
+      "baseline_median": 25597.656,
+      "adapted_median": 21449.219,
+      "change_percent": -16.206315922051605,
+      "baseline_range": [
+        25533.203,
+        25652.344
+      ],
+      "adapted_range": [
+        21365.234,
+        21669.922
+      ]
+    }
+  },
+  "status": "current normal BiT-128 OP hash, direct OP random, OP NTT",
+  "environment": {
+    "system": "Darwin",
+    "machine": "arm64",
+    "frequency_control": "not pinned",
+    "measurement": "serial alternating order; production uses system OP_trng, baseline original SM3 DRNG"
+  },
+  "source_sha256": {
+    "core/common/align.h": "e0705894d512895e4a35cc7f50ee8716e23ca9fa9af42e9ac394964420a77f52",
+    "core/common/bernoulli_internal.h": "0e04c2726235191888d2605f840a986266fce87bdfa7f08a9404f5bf1f50fe5e",
+    "core/common/ct_audit.h": "630be3690ddbe21b10c1ab3620101867c7cdb227ff58d19e411b270c7984286f",
+    "core/common/endian.h": "02e19b6cd878778f390333935e5b0626ae6d3a62f87174eaffd785f26f529487",
+    "core/common/ntt.c": "2a5f68cc1ac6f87b1663a8e59ed96eca1bf673653834c654a33c67350a772394",
+    "core/common/ntt.h": "91a70083815f8cb030fe561b7a75a38f27ed4eb601758845ad5c237ef73147f4",
+    "core/common/ntt_roots32.h": "c961af6b56d467c7f8214d6e97ac8bcc32775ba8a34c2601125c3acd521121c7",
+    "core/common/packing.c": "ebeec4196756454ea2c6772d86d3a407c58dbb13e0bacf16affd0810578c6d81",
+    "core/common/packing.h": "ce22ede71759afd509925a0f862e7426d321864910073db22b84c4e220fc3dc9",
+    "core/common/packing_checks.h": "dbe8028ac4ba90cd1e84c9a02c6051fe93cc1834a1698bdbf46d26455f5499a2",
+    "core/common/packing_public.h": "e4056ae3ac4f0548cb09e5f77704f26fd9061aa9e7cbf25572483e0cf4c6180f",
+    "core/common/packing_w1.h": "991a18f934213aad0ba09eb2ffe529005c7c03558c052826a1a5b48b4e6d96aa",
+    "core/common/parabola.c": "8129bf3fca75afc0527660c25810dbbcf2a71004f8000ed27c9e31bbb81bb451",
+    "core/common/parabola.h": "f9363cd0ea8004029769a04990e193038e243dc3042d52174cc1b065a8106214",
+    "core/common/poly.c": "06bb8e11d9a5db78a8bc118aa074697bf08636dea74f669b27037d3478bdf53c",
+    "core/common/poly.h": "9474f1716e8ea647183a43ee8daa1ce07c70ceb89426342b2c119074f856e60b",
+    "core/common/polyvec.h": "d7244c166a08e296ed0ffa72307cb7510e7dea0cc3d38e2ff4a4c38b5d954da8",
+    "core/common/polyvec_ref.c": "7698b0a35e081020cfdae9d0f2400ac64998976bc923cc9ebb2b4a9218f80a89",
+    "core/common/randombytes.c": "6e6ce9abc7b780a7ec9515ba4bdca6ce6eaf12a3272b50b3eb30f1bc32a08526",
+    "core/common/rans_decode.h": "a0c5f392f06b8cfe712c42f7c23da28ccdd31a5e62ea8d257a1f08c6b0520fcd",
+    "core/common/rans_model.h": "2d2e88bcce3b40ba693dedad58186ef73f5fa21862f9fedd0838ac1efd54c899",
+    "core/common/rans_model_128.h": "bfbf64acd55c40f961cbf43949c6cf64a23c9303692b2ac5bec8d756a675b00d",
+    "core/common/rans_types.h": "5b45f63d378068b923ed581c9fd40c4558f89583db70b969b926e326a4530023",
+    "core/common/reduce.h": "f131726de46d79e3513f1037e32c0d1f6cf17f2693b94635cf996c6758e99ac8",
+    "core/common/reduce_128.h": "4c84b09b530b3b5d2d56c03faf8a61c5df64ee3eb7d7e9ecfe4ef62e5a32ad60",
+    "core/common/sample.c": "970c7a47f1c70f0b1a2a382adb8a0d677f9a4e90adc2acd241c43d0a822ad6f7",
+    "core/common/sample.h": "5746ca35f9c08ae282e6eeb4844090707438e832e37e6b15b4079c26998163ec",
+    "core/common/sign.c": "c136baf3522fb1417530255ddb588f437a201e03895719cbf7f7b5d5dc542442",
+    "core/common/sign.h": "304b73bda7280782c97db4fb9b0d8937b463f8acc4e9ab22a5698c52dd1a7f0d",
+    "core/common/signature_api.c": "53e55d525285edb04e9b550bc1b1f9a12d75d6466dc5b49b4226082871c85838",
+    "core/common/signature_codec_128.c": "6db046f382f6ede8e79ea75c7cb8400d861f3ff17b184095388389776bcbb29b",
+    "core/common/small_sample.h": "d93f81d2e1c9d0373148421b3408af95757b98f8870df81699b63ff2881595bf",
+    "core/common/spectral.c": "7ede087be48ff07234a955e7db219f6381fcae3e2068286ba8741eb0d4167c98",
+    "core/common/spectral.h": "06d6cde5c7ab3a3bba4110950a9495b9ef3552fb7992fd418c6f315796ed6c8b",
+    "core/common/spectral_roots.h": "0066d4419387c6646482690ab41d8a92771483bd71b3f5e9ef0b026859ab3b93",
+    "core/common/symmetric.c": "6a1ac26e49a1bd1fac4dca8ad81d1c2b515623140826c3fc1e0efb779d018b55",
+    "core/common/symmetric.h": "4fac1fc596a7bb35d9b966597da1e49d8dbdbc96e2e47f6fece36a7d3fc2376d",
+    "include/SIG_AlgorithmInstance.h": "ec9fa161924617f276f62ac9bda02e24342b78c181f6215b77d37daa5e00d886",
+    "include/api.h": "e7ba60bafb182a6e8d8ed3b2f8c586f633630625958c2482579fdc4da0cc1eba",
+    "include/params.h": "7c00fd55432e3681255872af7c3de999681126b4d01675fc55edd75b7626d313",
+    "include/randombytes.h": "48207d4c856d506b4fe35fe914a315294992006dc0bb13f62c123cc84e8b3929",
+    "platform/pc/operator_interface.h": "911c7284f3151b404a67ab74d1b1ad9edcd8d8c42a2990c34d66a9ad57228090",
+    "platform/pc/soft/endian.c": "7f371f54ee0f24993a94b72ba5bd4fcf52d1aba216bb601b3667d6ebb48acd4d",
+    "platform/pc/soft/endian.h": "9680941b2189c191442b91f8e84c099afe9537c288e52ae4d096c45a889d4d5c",
+    "platform/pc/soft/op_hash.c": "fc71e056c8702ae7922ad8d5025ad90b11a521d01a3e511ba77ad5fc07d6bf17",
+    "platform/pc/soft/op_ntt.c": "559a3027346e63fa10cc542255751d5cf78453a40e1859f636eb349bdbe2267c",
+    "platform/pc/soft/op_trng.c": "4f2598edf5b9aed86d528efcfd2638ecabb81bb059998e1d6f60fbb18b142a64",
+    "platform/pc/soft/sha256.c": "4bbb06bc7db08a771f78fb9871f2c059f97b1b3a64a540d7c97dc23e50eb5d20",
+    "platform/pc/soft/sha256.h": "6ed9e0fbebb22fec4bfd945482023daa5fe30fc7a68c14f6c056186220aa0443",
+    "platform/pc/soft/sha3.h": "cec914ab414453dfb65ee46d356ca67a97c188926818e41a3ad8a53d83f9d85f",
+    "platform/pc/soft/sm3.c": "4f08910fe8d767fad868a5bed3184f88fad86823ed37abdbf3d4b7a9d85b0152",
+    "platform/pc/soft/sm3.h": "f58f2375ac7153aeaa8e76a407336877e0f8ad6e9b605fcf233914c0b56f4c5b"
+  },
+  "memory": {
+    "keygen_heap": 14920,
+    "sign_heap": 27872,
+    "verify_heap": 18944,
+    "fixed_io": 4400,
+    "algorithm_writable_global_state": 0,
+    "software_op_writable_state": 8,
+    "ntt_readonly_roots_rom": 2048,
+    "reserved_stack": 3072,
+    "allocator_and_alignment_reserve": 128,
+    "libc_reserve": 256,
+    "sign_payload_budget": 35736,
+    "sign_host_rounded_budget": 36536
+  },
+  "stack": {
+    "bit_sig_keygen": 2144,
+    "bit_sig_sign": 2448,
+    "bit_sig_verify": 1984,
+    "bit_random_init": 128
+  },
+  "verification": {
+    "full_kat_sha256": "fe956ca45525b0aa6e5a656e2c04f786d9ddefc9eedbe66b9c4e0ed323f45751",
+    "full_kat_identical_to_original": true,
+    "make_check_memory_stack_kat": true,
+    "asan_ubsan_check_memory": true,
+    "cmake_ctest_passed": 7,
+    "ntt_reference_vectors_per_backend": 48,
+    "ntt_backends": [
+      "software BiT OP",
+      "independent generic HQC OP"
+    ],
+    "injected_ntt_failures": {
+      "keygen": 16,
+      "sign": 42,
+      "verify": 23
+    },
+    "allocations_per_top_operation": 1
+  },
+  "independent_review": {
+    "critical": 0,
+    "important": 0,
+    "minor_resolved": "Inherited Barrett full-int32 claim narrowed to |a|<=2^30; no arithmetic changes"
+  }
+}

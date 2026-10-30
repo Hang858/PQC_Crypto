@@ -1,0 +1,4 @@
+platform/pc/build*/
+platform/pc/cmake-build*/
+__pycache__/
+*.pyc
